@@ -1,8 +1,8 @@
 # MTC Work Order Platform
 
-Custom work-order management platform for MTC Facility Solutions, replacing JobFlowGo. Covers work-order intake, vendor dispatch, quoting (with NTE/DNE enforcement), completion sign-off, and invoicing for MTC's commercial accounts, with a planned residential track.
+Custom work-order management platform for MTC Facility Solutions, replacing the previous third-party dispatch tool. Covers work-order intake, vendor dispatch, quoting (with NTE/DNE enforcement), completion sign-off, and invoicing for MTC's commercial accounts, with a planned residential track.
 
-See `docs/data-model.md` for the design rationale and what this deliberately does differently from JobFlowGo.
+See `docs/data-model.md` for the design rationale and what this deliberately does differently from the previous system.
 
 ## Stack
 
@@ -28,5 +28,5 @@ src/
   lib/            Supabase client, server utilities
   types/          shared domain types (work orders, quotes, vendors, ...)
 docs/
-  data-model.md   entity design + JobFlowGo review findings
+  data-model.md   entity design + design rationale
 ```

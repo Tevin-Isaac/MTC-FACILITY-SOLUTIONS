@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit*)",
+      "Bash(npm run build*)",
+      "Bash(source .env.local*)",
+      "Bash(set +a*)",
+      "Bash(set)",
+      "Bash(npm run lint*)",
+      "Bash(vercel ls*)",
+      "Bash(npx prisma generate*)",
+      "Bash(vercel env ls*)",
+      "Bash(vercel inspect*)",
+      "Bash(npm run dev*)",
+      "Bash(vercel whoami*)",
+      "Bash(npm audit*)",
+      "Bash(vercel project ls*)",
+      "Bash(vercel blob list-stores*)",
+      "Bash(vercel usage*)",
+      "Bash(vercel logs*)",
+      "Bash(npx eslint *)",
+      "mcp__Claude_Browser__read_page",
+      "mcp__claude_ai_Claude_Docs__read"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 // Core domain types for the MTC work-order platform.
 // Modeled on MTC's documented process (FC training, New Hire manual) and
-// corrected for the gaps found in the JobFlowGo review (see docs/data-model.md):
+// corrected for the gaps found in reviewing the previous system (see docs/data-model.md):
 // - single lifecycle, not duplicated pipelines/tags
 // - NTE (vendor-side) and DNE (client-side) as first-class fields
 // - sites as their own entity under an account, not flattened into "clients"
@@ -27,7 +27,7 @@ export type Priority =
   | "routine_scheduled";
 
 // Single, non-duplicated status pipeline. Every stage is reachable from an
-// adjacent stage only (no free any-to-any drag, unlike JobFlowGo) to keep
+// adjacent stage only (no free any-to-any drag) to keep
 // the lifecycle meaningful.
 export type WorkOrderStatus =
   | "new"
@@ -119,7 +119,7 @@ export interface QuoteLineItem {
 export interface Quote {
   id: string;
   workOrderId: string;
-  // Two-option repair-vs-replace support, absent in JobFlowGo.
+  // Two-option repair-vs-replace support.
   optionType: "single" | "repair_vs_replace";
   repairLineItems: QuoteLineItem[];
   replaceLineItems: QuoteLineItem[] | null;

@@ -34,8 +34,26 @@ export function SlaDonut({ counts }: { counts: SlaCounts }) {
   const total = counts.onTrack + counts.atRisk + counts.breached;
   const data = SEGMENTS.map((s) => ({ ...s, value: counts[s.key] }));
 
+  // A row of rounded blocks, one per open WO, colored by SLA segment — a
+  // quick visual gut-check to sit alongside the donut's precise numbers.
+  const blocks = data.flatMap((seg) =>
+    Array.from({ length: seg.value }, () => seg.color)
+  );
+
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-4">
+      {blocks.length > 0 && (
+        <div className="flex gap-1">
+          {blocks.map((color, i) => (
+            <span
+              key={i}
+              className="h-2.5 flex-1 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
       <div className="relative h-40 w-40 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -82,6 +100,7 @@ export function SlaDonut({ counts }: { counts: SlaCounts }) {
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 }

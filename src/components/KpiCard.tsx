@@ -31,9 +31,9 @@ export function KpiCard({
   const isGood = deltaGoodDirection === "down" ? delta <= 0 : delta >= 0;
 
   const toneStyles = {
-    default: "bg-brand-navy text-white",
-    warning: "bg-brand-gold text-brand-navy-dark",
-    danger: "bg-red-600 text-white",
+    default: "bg-blue-500 text-white",
+    warning: "bg-amber-500 text-white",
+    danger: "bg-red-500 text-white",
   }[tone];
 
   const sparkColor = tone === "danger" ? "var(--status-critical)" : "var(--chart-sequential)";
@@ -42,7 +42,7 @@ export function KpiCard({
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.15 }}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm hover:shadow-md"
+      className="flex flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm ring-1 ring-black/5 hover:shadow-md"
     >
       <div className="flex items-center justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneStyles}`}>

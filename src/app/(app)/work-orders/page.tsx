@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, LayoutGrid, List } from "lucide-react";
+import { toast } from "sonner";
 import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
 import { WorkOrderBoard } from "@/components/WorkOrderBoard";
 import {
@@ -85,6 +86,11 @@ export default function WorkOrdersPage() {
           </div>
           <button
             type="button"
+            onClick={() =>
+              toast.info("Not connected to a backend yet", {
+                description: "Creating work orders will work once real data is wired up.",
+              })
+            }
             className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-navy-dark"
           >
             <Plus className="h-4 w-4" />
@@ -113,7 +119,7 @@ export default function WorkOrdersPage() {
       {view === "board" ? (
         <WorkOrderBoard initialWorkOrders={rows} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-black/5">
           <div className="overflow-x-auto">
             <table className="w-full min-w-240 text-left text-sm">
               <thead>

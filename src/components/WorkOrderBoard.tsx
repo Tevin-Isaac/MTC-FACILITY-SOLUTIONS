@@ -61,7 +61,7 @@ export function WorkOrderBoard({
               setDraggingId(null);
               setDragOverPhase(null);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface transition-shadow ${
+            className={`flex w-72 shrink-0 flex-col rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 transition-shadow ${
               dragOverPhase === phase ? "ring-2 ring-brand-gold" : ""
             }`}
           >

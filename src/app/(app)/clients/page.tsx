@@ -18,7 +18,7 @@ export default function ClientsPage() {
           return (
             <div
               key={account.id}
-              className="rounded-xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+              className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 transition-shadow hover:shadow-md"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-navy text-white">
@@ -36,8 +36,8 @@ export default function ClientsPage() {
                 )}
                 {sites.map((site) => (
                   <li key={site.id} className="text-sm">
-                    <span className="font-medium">{site.name}</span>
-                    <span className="ml-2 text-muted">{site.address}</span>
+                    <p className="font-medium">{site.name}</p>
+                    <p className="text-xs text-muted">{site.address}</p>
                   </li>
                 ))}
               </ul>

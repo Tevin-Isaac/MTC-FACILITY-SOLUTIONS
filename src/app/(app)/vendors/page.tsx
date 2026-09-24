@@ -1,11 +1,5 @@
-import { Wrench, ShieldAlert, ShieldCheck } from "lucide-react";
-import { mockVendors } from "@/lib/mock-data";
-
-function isExpiringSoon(dateStr: string | null) {
-  if (!dateStr) return false;
-  const days = (new Date(dateStr).getTime() - Date.now()) / 86_400_000;
-  return days < 30;
-}
+import { Wrench, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { mockVendors, vendorComplianceStatus } from "@/lib/mock-data";
 
 export default function VendorsPage() {
   return (
@@ -17,7 +11,7 @@ export default function VendorsPage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-black/5">
         <div className="overflow-x-auto">
           <table className="w-full min-w-200 text-left text-sm">
             <thead>
@@ -32,8 +26,13 @@ export default function VendorsPage() {
             </thead>
             <tbody>
               {mockVendors.map((vendor) => {
-                const coiWarn = isExpiringSoon(vendor.coiExpiresAt);
-                const licenseWarn = isExpiringSoon(vendor.licenseExpiresAt);
+                const status = vendorComplianceStatus(vendor);
+                const dateClass =
+                  status === "expired"
+                    ? "text-status-critical"
+                    : status === "expiring_soon"
+                      ? "text-amber-700"
+                      : undefined;
                 return (
                   <tr
                     key={vendor.id}
@@ -59,17 +58,18 @@ export default function VendorsPage() {
                         : "—"}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={coiWarn ? "text-amber-700" : undefined}>
-                        {vendor.coiExpiresAt ?? "—"}
-                      </span>
+                      <span className={dateClass}>{vendor.coiExpiresAt ?? "—"}</span>
                     </td>
                     <td className="px-5 py-3">
-                      <span className={licenseWarn ? "text-amber-700" : undefined}>
-                        {vendor.licenseExpiresAt ?? "—"}
-                      </span>
+                      <span className={dateClass}>{vendor.licenseExpiresAt ?? "—"}</span>
                     </td>
                     <td className="px-5 py-3">
-                      {coiWarn || licenseWarn ? (
+                      {status === "expired" ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-status-critical">
+                          <ShieldX className="h-3.5 w-3.5" />
+                          Expired — dispatch blocked
+                        </span>
+                      ) : status === "expiring_soon" ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
                           <ShieldAlert className="h-3.5 w-3.5" />
                           Expiring soon

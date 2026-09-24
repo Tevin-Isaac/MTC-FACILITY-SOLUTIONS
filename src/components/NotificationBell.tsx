@@ -46,7 +46,7 @@ export function NotificationBell() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-raised shadow-xl backdrop-blur-sm"
+              className="fixed right-3 top-16 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-raised shadow-xl sm:right-6"
             >
               <div className="border-b border-border px-4 py-3">
                 <h3 className="text-sm font-semibold">SLA alerts</h3>

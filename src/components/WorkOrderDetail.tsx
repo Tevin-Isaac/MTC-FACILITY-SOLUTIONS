@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   MapPin,
   Phone,
   Clock,
+  ShieldX,
 } from "lucide-react";
 import type { WorkOrder } from "@/types/work-order";
 import {
@@ -19,6 +21,9 @@ import {
   slaCountdown,
   nextStepLabel,
   phaseForStatus,
+  vendorComplianceStatus,
+  quoteLineItems,
+  estimatedMargin,
 } from "@/lib/mock-data";
 import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
 import { PhaseProgressBar } from "@/components/PhaseProgressBar";
@@ -35,6 +40,12 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
 
   const inQuotePhase = phase === "Quote";
   const gatesReached = ["Completion", "Billing", "Closed"].includes(phase);
+  const vendorBlocked = vendor ? vendorComplianceStatus(vendor) === "expired" : false;
+
+  const repairTotal = wo.nte ?? 0;
+  const repairLines = quoteLineItems(repairTotal);
+  const replaceTotal = Math.round(repairTotal * 2.4);
+  const replaceLines = quoteLineItems(replaceTotal);
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -46,7 +57,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
         Work Orders
       </Link>
 
-      <div className="rounded-xl border border-border bg-surface p-5">
+      <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -93,6 +104,11 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
             )}
             <button
               type="button"
+              onClick={() =>
+                toast.info("Not connected to a backend yet", {
+                  description: `"${nextStepLabel(wo.status)}" will update the work order once real data is wired up.`,
+                })
+              }
               className="rounded-lg bg-brand-navy px-4 py-2 text-sm font-medium text-white hover:bg-brand-navy-dark"
             >
               {nextStepLabel(wo.status)}
@@ -107,7 +123,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
             <h2 className="text-sm font-semibold">Completion gates</h2>
             <p className="mt-1 text-xs text-muted">
               Required before this work order can move to billing.
@@ -132,7 +148,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
           </div>
 
           {inQuotePhase && (
-            <div className="rounded-xl border border-border bg-surface p-5">
+            <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
               <h2 className="text-sm font-semibold">Quote</h2>
               <p className="mt-1 text-xs text-muted">
                 Two-option quoting for major equipment, per MTC policy.
@@ -143,12 +159,12 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                     Option A · Repair
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    ${(wo.nte ?? 0).toLocaleString()}
+                    ${repairTotal.toLocaleString()}
                   </p>
                   <ul className="mt-3 flex flex-col gap-1 text-xs text-muted">
-                    <li>Labor: {Math.round((wo.nte ?? 0) * 0.55).toLocaleString()}</li>
-                    <li>Materials: {Math.round((wo.nte ?? 0) * 0.35).toLocaleString()}</li>
-                    <li>Trip charge: 115</li>
+                    <li>Labor: {repairLines.labor.toLocaleString()}</li>
+                    <li>Materials: {repairLines.materials.toLocaleString()}</li>
+                    <li>Trip charge: {repairLines.tripCharge.toLocaleString()}</li>
                   </ul>
                 </div>
                 <div className="rounded-lg border border-border p-4">
@@ -156,12 +172,12 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                     Option B · Replace
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    ${Math.round((wo.nte ?? 0) * 2.4).toLocaleString()}
+                    ${replaceTotal.toLocaleString()}
                   </p>
                   <ul className="mt-3 flex flex-col gap-1 text-xs text-muted">
-                    <li>Labor: {Math.round((wo.nte ?? 0) * 0.6).toLocaleString()}</li>
-                    <li>Equipment: {Math.round((wo.nte ?? 0) * 1.65).toLocaleString()}</li>
-                    <li>Trip charge: 115</li>
+                    <li>Labor: {replaceLines.labor.toLocaleString()}</li>
+                    <li>Equipment: {replaceLines.materials.toLocaleString()}</li>
+                    <li>Trip charge: {replaceLines.tripCharge.toLocaleString()}</li>
                   </ul>
                 </div>
               </div>
@@ -172,24 +188,44 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
             </div>
           )}
 
-          <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
             <h2 className="text-sm font-semibold">Activity</h2>
             <ul className="mt-3 flex flex-col gap-3 text-sm">
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gold" />
                 <div>
-                  <p>Work order created</p>
+                  <p>
+                    Work order created
+                    {wo.source === "service_channel" && " via ServiceChannel"}
+                  </p>
                   <p className="text-xs text-muted">
                     {new Date(wo.createdAt).toLocaleString()}
                   </p>
                 </div>
               </li>
+              {wo.nteHistory.map((inc, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gold" />
+                  <div>
+                    <p>
+                      NTE increased to ${inc.amount.toLocaleString()} by {inc.approvedBy}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {new Date(inc.approvedAt).toLocaleString()} · via {inc.method}
+                    </p>
+                  </div>
+                </li>
+              ))}
               {vendor && (
                 <li className="flex gap-3">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gold" />
                   <div>
-                    <p>Dispatched to {vendor.name}</p>
-                    <p className="text-xs text-muted">Vendor accepted</p>
+                    <p>Dispatched to {vendor.name}, vendor accepted</p>
+                    <p className="text-xs text-muted">
+                      {new Date(
+                        new Date(wo.createdAt).getTime() + 20 * 60_000
+                      ).toLocaleString()}
+                    </p>
                   </div>
                 </li>
               )}
@@ -197,6 +233,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-border" />
                 <div>
                   <p className="text-muted">Current status: {phase}</p>
+                  <p className="text-xs text-muted">as of now</p>
                 </div>
               </li>
             </ul>
@@ -204,7 +241,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
             <h2 className="text-sm font-semibold">Site</h2>
             <p className="mt-2 text-sm font-medium">{site?.name}</p>
             <p className="text-xs text-muted">{account?.name}</p>
@@ -230,7 +267,7 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
             )}
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Vendor</h2>
               <AssignVendorDrawer
@@ -248,13 +285,19 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                 <p className="mt-1 text-xs tabular-nums text-muted">
                   ${vendor.rateCardHourly}/hr
                 </p>
+                {vendorBlocked && (
+                  <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-2 text-xs font-medium text-status-critical">
+                    <ShieldX className="h-3.5 w-3.5 shrink-0" />
+                    COI/license expired — this vendor should not remain dispatched.
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-2 text-sm text-muted">Unassigned</p>
             )}
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5">
             <h2 className="text-sm font-semibold">Money</h2>
             <dl className="mt-3 flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
@@ -275,6 +318,22 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                   {wo.nte === wo.dne ? "Within authorization" : "Review required"}
                 </dd>
               </div>
+              {wo.nte != null && (
+                <>
+                  <div className="flex justify-between border-t border-border pt-2 text-xs">
+                    <dt className="text-muted">Est. vendor cost (18% markup)</dt>
+                    <dd className="tabular-nums text-muted">
+                      ${estimatedMargin(wo.nte).vendorCost.toLocaleString()}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <dt className="text-muted">Est. margin</dt>
+                    <dd className="tabular-nums text-status-good">
+                      ${estimatedMargin(wo.nte).margin.toLocaleString()}
+                    </dd>
+                  </div>
+                </>
+              )}
             </dl>
             {wo.nteHistory.length > 0 && (
               <div className="mt-3 border-t border-border pt-3">

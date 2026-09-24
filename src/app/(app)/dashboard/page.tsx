@@ -7,6 +7,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { KpiCard } from "@/components/KpiCard";
+import { DashboardHero } from "@/components/DashboardHero";
 import { StatusBadge, PriorityBadge } from "@/components/Badge";
 import { CategoryBarChart } from "@/components/charts/CategoryBarChart";
 import { SlaDonut } from "@/components/charts/SlaDonut";
@@ -69,18 +70,16 @@ export default function DashboardPage() {
     return aCd - bCd;
   });
 
-  const summary = `${slaCounts.breached + slaCounts.atRisk} WO${
-    slaCounts.breached + slaCounts.atRisk === 1 ? "" : "s"
-  } at SLA risk today, ${pendingQuotes.length} quote${
+  const needsAttentionCount = slaCounts.breached + slaCounts.atRisk;
+  const summary = `${needsAttentionCount} WO${needsAttentionCount === 1 ? "" : "s"} need${
+    needsAttentionCount === 1 ? "s" : ""
+  } attention (${slaCounts.atRisk} at risk, ${slaCounts.breached} breached), ${pendingQuotes.length} quote${
     pendingQuotes.length === 1 ? "" : "s"
   } awaiting client, $${overdueAr.toLocaleString()} ready to bill.`;
 
   return (
     <div className="flex flex-col gap-8 p-6 md:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Good afternoon, Tevin</h1>
-        <p className="mt-1 text-sm text-muted">{summary}</p>
-      </div>
+      <DashboardHero greeting="Good afternoon, Tevin" summary={summary} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -116,7 +115,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
+        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">SLA health</h2>
           <p className="mt-1 text-xs text-muted">Across all open work orders</p>
           <div className="mt-4">
@@ -124,7 +123,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
+        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">Work orders by phase</h2>
           <p className="mt-1 text-xs text-muted">All work orders, current phase family</p>
           <div className="mt-2">
@@ -132,7 +131,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
+        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">Work orders by trade</h2>
           <p className="mt-1 text-xs text-muted">All work orders, by trade</p>
           <div className="mt-2">
@@ -142,7 +141,7 @@ export default function DashboardPage() {
       </div>
 
       {needsAttention.length > 0 && (
-        <div className="rounded-xl border border-status-critical/30 bg-surface">
+        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-status-critical/20">
           <div className="flex items-center gap-2 border-b border-border px-5 py-4">
             <AlertTriangle className="h-4 w-4 text-status-critical" />
             <h2 className="text-sm font-semibold">Needs attention</h2>
@@ -176,7 +175,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-surface">
+      <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold">My queue</h2>
           <Link

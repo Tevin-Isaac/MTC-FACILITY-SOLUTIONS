@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
-import { X, ShieldCheck, ShieldAlert, Star } from "lucide-react";
+import { X, ShieldCheck, ShieldAlert, ShieldX, Star, UserRoundCog } from "lucide-react";
 import type { Trade } from "@/types/work-order";
-import { vendorsForTrade } from "@/lib/mock-data";
-
-function isExpiringSoon(dateStr: string | null) {
-  if (!dateStr) return false;
-  const days = (new Date(dateStr).getTime() - Date.now()) / 86_400_000;
-  return days < 30;
-}
+import { vendorsForTrade, vendorComplianceStatus } from "@/lib/mock-data";
 
 export function AssignVendorDrawer({
   trade,
@@ -30,8 +24,9 @@ export function AssignVendorDrawer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs font-medium text-brand-navy underline-offset-4 hover:underline"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-brand-navy hover:bg-black/5"
       >
+        <UserRoundCog className="h-3.5 w-3.5" />
         {currentVendorId ? "Change vendor" : "Assign vendor"}
       </button>
 
@@ -71,8 +66,9 @@ export function AssignVendorDrawer({
             <div className="flex-1 overflow-y-auto p-3">
               {vendors.map((vendor) => {
                 const tradeMatch = vendor.trades.includes(trade);
-                const coiWarn = isExpiringSoon(vendor.coiExpiresAt);
+                const compliance = vendorComplianceStatus(vendor);
                 const isCurrent = vendor.id === currentVendorId;
+                const blocked = compliance === "expired";
                 return (
                   <div
                     key={vendor.id}
@@ -94,9 +90,14 @@ export function AssignVendorDrawer({
                       )}
                     </div>
 
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted">
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
                       <span className="tabular-nums">${vendor.rateCardHourly}/hr</span>
-                      {coiWarn ? (
+                      {compliance === "expired" ? (
+                        <span className="inline-flex items-center gap-1 font-medium text-status-critical">
+                          <ShieldX className="h-3.5 w-3.5" />
+                          COI/license expired
+                        </span>
+                      ) : compliance === "expiring_soon" ? (
                         <span className="inline-flex items-center gap-1 text-amber-700">
                           <ShieldAlert className="h-3.5 w-3.5" />
                           COI expiring
@@ -117,7 +118,7 @@ export function AssignVendorDrawer({
 
                     <button
                       type="button"
-                      disabled={isCurrent}
+                      disabled={isCurrent || blocked}
                       onClick={() => {
                         onAssign(vendor.id);
                         setOpen(false);
@@ -127,7 +128,11 @@ export function AssignVendorDrawer({
                       }}
                       className="mt-3 w-full rounded-lg bg-brand-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-navy-dark disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isCurrent ? "Currently assigned" : "Send dispatch"}
+                      {isCurrent
+                        ? "Currently assigned"
+                        : blocked
+                          ? "Dispatch blocked — compliance expired"
+                          : "Send dispatch"}
                     </button>
                   </div>
                 );

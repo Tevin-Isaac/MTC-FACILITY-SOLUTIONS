@@ -181,6 +181,24 @@ export function seededTrend(seed: number, current: number, points = 7): number[]
   return arr;
 }
 
+// Illustrative quote line items that actually sum to `total` — trip charge
+// fixed at MTC's $115 standard, remainder split labor/materials.
+export function quoteLineItems(total: number, tripCharge = 115) {
+  const charged = Math.min(tripCharge, total);
+  const remaining = Math.max(total - charged, 0);
+  const labor = Math.round(remaining * 0.6);
+  const materials = remaining - labor;
+  return { labor, materials, tripCharge: charged };
+}
+
+// Estimated vendor cost / MTC margin at the standard 15-20% materials
+// markup (New Hire manual §3.4) — illustrative until real cost line items
+// exist per quote.
+export function estimatedMargin(total: number, markupPercent = 0.18) {
+  const vendorCost = Math.round(total / (1 + markupPercent));
+  return { vendorCost, margin: total - vendorCost };
+}
+
 export function accountForSite(siteId: string): Account | undefined {
   const site = mockSites.find((s) => s.id === siteId);
   if (!site) return undefined;
@@ -194,6 +212,31 @@ export function siteById(siteId: string): Site | undefined {
 export function vendorById(vendorId: string | null): Vendor | undefined {
   if (!vendorId) return undefined;
   return mockVendors.find((v) => v.id === vendorId);
+}
+
+export type ComplianceStatus = "expired" | "expiring_soon" | "valid" | "unknown";
+
+export function complianceStatus(
+  dateStr: string | null,
+  now: Date = new Date()
+): ComplianceStatus {
+  if (!dateStr) return "unknown";
+  const days = (new Date(dateStr).getTime() - now.getTime()) / 86_400_000;
+  if (days < 0) return "expired";
+  if (days < 30) return "expiring_soon";
+  return "valid";
+}
+
+// Worst-of COI/license compliance for a vendor — used to gate dispatch.
+export function vendorComplianceStatus(vendor: Vendor, now: Date = new Date()): ComplianceStatus {
+  const statuses = [
+    complianceStatus(vendor.coiExpiresAt, now),
+    complianceStatus(vendor.licenseExpiresAt, now),
+  ];
+  if (statuses.includes("expired")) return "expired";
+  if (statuses.includes("expiring_soon")) return "expiring_soon";
+  if (statuses.every((s) => s === "unknown")) return "unknown";
+  return "valid";
 }
 
 export function workOrderById(id: string): WorkOrder | undefined {

@@ -11,6 +11,7 @@ import {
   Bell,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -70,17 +71,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
           <div className="flex items-center gap-3 md:hidden">
-            <Image
-              src="/mtc-logo.png"
-              alt="MTC Facility Solutions"
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-1">
+              <Image
+                src="/mtc-logo.png"
+                alt="MTC Facility Solutions"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
+              />
+            </div>
             <span className="text-sm font-semibold">MTC</span>
           </div>
           <div className="hidden md:block" />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button
               type="button"
               className="rounded-full p-2 text-muted hover:bg-black/5"

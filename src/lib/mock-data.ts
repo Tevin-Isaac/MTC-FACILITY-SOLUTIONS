@@ -35,6 +35,10 @@ export const mockWorkOrders: WorkOrder[] = [
   { id: "wo_3", woNumber: "WO-3023", legacyWoNumber: "BBT-1187", siteId: "site_3", trade: "plumbing", priority: "standard_48_hour", status: "pending_quote", description: "Slow drain, restroom 2", poNumber: "PO-55301", nte: null, dne: null, vendorId: "ven_1", slaRespondBy: "2026-09-26T18:00:00Z", slaResolveBy: null, createdAt: "2026-09-23T16:40:00Z", closedAt: null },
   { id: "wo_4", woNumber: "WO-3018", legacyWoNumber: null, siteId: "site_1", trade: "electrical", priority: "priority_24_hour", status: "in_quality_assurance", description: "Outlet not working, back office", poNumber: "PO-55177", nte: 260, dne: 260, vendorId: "ven_3", slaRespondBy: "2026-09-22T18:00:00Z", slaResolveBy: "2026-09-23T09:10:00Z", createdAt: "2026-09-21T14:00:00Z", closedAt: null },
   { id: "wo_5", woNumber: "WO-3010", legacyWoNumber: "DT-4471", siteId: "site_2", trade: "hvac", priority: "routine_scheduled", status: "closed", description: "Quarterly PM, rooftop units", poNumber: "PO-54980", nte: 400, dne: 400, vendorId: "ven_2", slaRespondBy: null, slaResolveBy: null, createdAt: "2026-09-10T08:00:00Z", closedAt: "2026-09-18T17:30:00Z" },
+  { id: "wo_6", woNumber: "WO-3024", legacyWoNumber: null, siteId: "site_2", trade: "plumbing", priority: "emergency_same_day", description: "Sewage backup, restroom flooding", status: "assigned", poNumber: "PO-55320", nte: 500, dne: 500, vendorId: "ven_1", slaRespondBy: "2026-09-24T14:00:00Z", slaResolveBy: "2026-09-24T13:00:00Z", createdAt: "2026-09-24T10:00:00Z", closedAt: null },
+  { id: "wo_7", woNumber: "WO-3025", legacyWoNumber: "CC-88240", siteId: "site_1", trade: "hvac", priority: "priority_24_hour", description: "No cooling, server closet", status: "new", poNumber: null, nte: null, dne: null, vendorId: null, slaRespondBy: "2026-09-25T12:00:00Z", slaResolveBy: null, createdAt: "2026-09-24T13:10:00Z", closedAt: null },
+  { id: "wo_8", woNumber: "WO-3015", legacyWoNumber: "DT-4488", siteId: "site_2", trade: "roofing", priority: "standard_48_hour", description: "Roof leak over sales floor", status: "ready_to_bill", poNumber: "PO-55090", nte: 1200, dne: 1200, vendorId: "ven_4", slaRespondBy: null, slaResolveBy: null, createdAt: "2026-09-18T09:00:00Z", closedAt: null },
+  { id: "wo_9", woNumber: "WO-3005", legacyWoNumber: "BBT-1150", siteId: "site_3", trade: "electrical", priority: "routine_scheduled", description: "Panel upgrade, bay 4", status: "invoiced", poNumber: "PO-54890", nte: 3200, dne: 3200, vendorId: "ven_3", slaRespondBy: null, slaResolveBy: null, createdAt: "2026-09-05T09:00:00Z", closedAt: null },
 ];
 
 export const STATUS_LABEL: Record<WorkOrderStatus, string> = {
@@ -58,6 +62,73 @@ export const STATUS_LABEL: Record<WorkOrderStatus, string> = {
   cancelled: "Cancelled",
   on_hold: "On Hold",
 };
+
+// Buckets group the granular status list into stages meaningful for a
+// board/chart view, matching MTC's documented workflow.
+export type StatusBucket =
+  | "New & Dispatch"
+  | "In Progress"
+  | "Quoting"
+  | "Quality Review"
+  | "Ready to Bill"
+  | "Closed";
+
+const BUCKET_BY_STATUS: Record<WorkOrderStatus, StatusBucket> = {
+  new: "New & Dispatch",
+  assigned: "New & Dispatch",
+  schedule_confirmed: "New & Dispatch",
+  tech_onsite: "In Progress",
+  work_completed: "In Progress",
+  pending_documentation: "In Progress",
+  pending_quote: "Quoting",
+  quote_with_client: "Quoting",
+  quote_approved: "Quoting",
+  quote_declined: "Quoting",
+  in_quality_assurance: "Quality Review",
+  ready_to_bill: "Ready to Bill",
+  ready_to_invoice: "Ready to Bill",
+  invoiced: "Ready to Bill",
+  paid: "Closed",
+  closed: "Closed",
+  complete_no_charge: "Closed",
+  cancelled: "Closed",
+  on_hold: "In Progress",
+};
+
+export const STATUS_BUCKETS: StatusBucket[] = [
+  "New & Dispatch",
+  "In Progress",
+  "Quoting",
+  "Quality Review",
+  "Ready to Bill",
+  "Closed",
+];
+
+// Representative status used when a card is moved into a bucket on the board.
+export const BUCKET_DEFAULT_STATUS: Record<StatusBucket, WorkOrderStatus> = {
+  "New & Dispatch": "assigned",
+  "In Progress": "tech_onsite",
+  Quoting: "pending_quote",
+  "Quality Review": "in_quality_assurance",
+  "Ready to Bill": "ready_to_bill",
+  Closed: "closed",
+};
+
+export function bucketForStatus(status: WorkOrderStatus): StatusBucket {
+  return BUCKET_BY_STATUS[status];
+}
+
+export type SlaRisk = "on_track" | "at_risk" | "breached";
+
+export function slaRisk(wo: WorkOrder, now: Date = new Date()): SlaRisk {
+  if (bucketForStatus(wo.status) === "Closed") return "on_track";
+  if (!wo.slaResolveBy) return "on_track";
+  const resolveBy = new Date(wo.slaResolveBy).getTime();
+  const hoursRemaining = (resolveBy - now.getTime()) / 3_600_000;
+  if (hoursRemaining < 0) return "breached";
+  if (hoursRemaining <= 4) return "at_risk";
+  return "on_track";
+}
 
 export function accountForSite(siteId: string): Account | undefined {
   const site = mockSites.find((s) => s.id === siteId);

@@ -11,6 +11,14 @@
   --brand-navy-dark: #060d1d;
   --brand-gold: #eec14a;
   --brand-gold-dark: #c99a2e;
+
+  /* Chart tokens (see docs/data-model.md / dataviz skill for rationale) */
+  --chart-sequential: #2a78d6;
+  --chart-grid: #e1e0d9;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
 }
 
 @theme inline {
@@ -23,18 +31,34 @@
   --color-brand-navy-dark: var(--brand-navy-dark);
   --color-brand-gold: var(--brand-gold);
   --color-brand-gold-dark: var(--brand-gold-dark);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #060d1d;
     --foreground: #eef1f6;
     --surface: #0b1e3c;
     --border: #1c2c4a;
     --muted: #93a0b8;
+    --chart-sequential: #3987e5;
+    --chart-grid: #2c2c2a;
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #060d1d;
+  --foreground: #eef1f6;
+  --surface: #0b1e3c;
+  --border: #1c2c4a;
+  --muted: #93a0b8;
+  --chart-sequential: #3987e5;
+  --chart-grid: #2c2c2a;
 }
 
 body {

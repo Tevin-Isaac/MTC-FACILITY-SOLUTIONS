@@ -18,7 +18,7 @@ export default function ClientsPage() {
           return (
             <div
               key={account.id}
-              className="rounded-xl border border-border bg-surface p-5"
+              className="rounded-xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-navy text-white">

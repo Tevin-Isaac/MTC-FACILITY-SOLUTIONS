@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import type { WorkOrder } from "@/types/work-order";
 import {
   PHASE_FAMILIES,
@@ -26,11 +27,18 @@ export function WorkOrderBoard({
   const [dragOverPhase, setDragOverPhase] = useState<PhaseFamily | null>(null);
 
   function moveTo(id: string, phase: PhaseFamily) {
+    let moved: WorkOrder | undefined;
     setWorkOrders((prev) =>
-      prev.map((wo) =>
-        wo.id === id ? { ...wo, status: PHASE_DEFAULT_STATUS[phase] } : wo
-      )
+      prev.map((wo) => {
+        if (wo.id !== id) return wo;
+        if (phaseForStatus(wo.status) === phase) return wo;
+        moved = wo;
+        return { ...wo, status: PHASE_DEFAULT_STATUS[phase] };
+      })
     );
+    if (moved) {
+      toast.success(`${moved.woNumber} moved to ${phase}`);
+    }
   }
 
   return (
@@ -53,7 +61,7 @@ export function WorkOrderBoard({
               setDraggingId(null);
               setDragOverPhase(null);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface ${
+            className={`flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface transition-shadow ${
               dragOverPhase === phase ? "ring-2 ring-brand-gold" : ""
             }`}
           >
@@ -86,7 +94,7 @@ export function WorkOrderBoard({
                       setDraggingId(wo.id);
                     }}
                     onDragEnd={() => setDraggingId(null)}
-                    className={`cursor-grab rounded-lg border border-border bg-background p-3 shadow-sm transition-opacity active:cursor-grabbing ${
+                    className={`cursor-grab rounded-lg border border-border bg-background p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${
                       draggingId === wo.id ? "opacity-40" : "opacity-100"
                     }`}
                   >

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import { X, ShieldCheck, ShieldAlert, Star } from "lucide-react";
 import type { Trade } from "@/types/work-order";
 import { vendorsForTrade } from "@/lib/mock-data";
@@ -33,9 +35,21 @@ export function AssignVendorDrawer({
         {currentVendorId ? "Change vendor" : "Assign vendor"}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setOpen(false)}>
-          <div
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          >
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 380, damping: 38 }}
             className="flex h-full w-full max-w-sm flex-col bg-raised shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -107,6 +121,9 @@ export function AssignVendorDrawer({
                       onClick={() => {
                         onAssign(vendor.id);
                         setOpen(false);
+                        toast.success(`${vendor.name} assigned`, {
+                          description: "Dispatch link sent to the vendor.",
+                        });
                       }}
                       className="mt-3 w-full rounded-lg bg-brand-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-navy-dark disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -116,9 +133,10 @@ export function AssignVendorDrawer({
                 );
               })}
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

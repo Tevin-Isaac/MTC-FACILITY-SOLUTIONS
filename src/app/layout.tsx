@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -42,6 +43,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "var(--raised)",
+              color: "var(--foreground)",
+              border: "1px solid var(--border)",
+            },
+          }}
+        />
       </body>
     </html>
   );

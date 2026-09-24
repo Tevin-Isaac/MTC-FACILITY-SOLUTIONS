@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -42,6 +44,7 @@ export function CommandPalette() {
     document.documentElement.setAttribute("data-theme", next);
     window.localStorage.setItem("mtc-theme", next);
     setOpen(false);
+    toast.success(`Switched to ${next} mode`);
   }
 
   return (
@@ -58,12 +61,21 @@ export function CommandPalette() {
         </kbd>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-24"
-          onClick={() => setOpen(false)}
-        >
-          <div
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-24 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          >
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-raised shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -105,9 +117,10 @@ export function CommandPalette() {
                 </Command.Group>
               </Command.List>
             </Command>
-          </div>
-        </div>
-      )}
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

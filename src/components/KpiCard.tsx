@@ -1,18 +1,24 @@
-import type { LucideIcon } from "lucide-react";
+"use client";
+
+import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { motion } from "framer-motion";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 
 export function KpiCard({
   label,
   value,
-  icon: Icon,
+  icon,
   trend,
   deltaGoodDirection = "down",
   tone = "default",
 }: {
   label: string;
-  value: string | number;
-  icon: LucideIcon;
+  value: number;
+  /** A rendered icon element, e.g. `<ClipboardList className="h-5 w-5" />` —
+   * a component reference can't cross the server/client boundary as a prop. */
+  icon: ReactNode;
   /** Recent trend points, oldest first, ending at the current value. */
   trend: number[];
   /** Whether a falling trend counts as good news (e.g. SLA breaches) or bad (e.g. revenue). */
@@ -33,10 +39,14 @@ export function KpiCard({
   const sparkColor = tone === "danger" ? "var(--status-critical)" : "var(--chart-sequential)";
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.15 }}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5 shadow-sm hover:shadow-md"
+    >
       <div className="flex items-center justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneStyles}`}>
-          <Icon className="h-5 w-5" />
+          {icon}
         </div>
         {delta !== 0 && (
           <span
@@ -50,10 +60,12 @@ export function KpiCard({
         )}
       </div>
       <div>
-        <p className="text-2xl font-semibold leading-none tabular-nums">{value}</p>
+        <p className="text-2xl font-semibold leading-none">
+          <AnimatedNumber value={value} />
+        </p>
         <p className="mt-1 text-sm text-muted">{label}</p>
       </div>
       <Sparkline data={trend} color={sparkColor} />
-    </div>
+    </motion.div>
   );
 }

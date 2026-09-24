@@ -86,14 +86,14 @@ export default function DashboardPage() {
         <KpiCard
           label="Open work orders"
           value={openWorkOrders.length}
-          icon={ClipboardList}
+          icon={<ClipboardList className="h-5 w-5" />}
           trend={seededTrend(11, openWorkOrders.length)}
           deltaGoodDirection="down"
         />
         <KpiCard
           label="Emergency, open"
           value={emergencyOpen.length}
-          icon={AlertTriangle}
+          icon={<AlertTriangle className="h-5 w-5" />}
           tone="danger"
           trend={seededTrend(23, emergencyOpen.length)}
           deltaGoodDirection="down"
@@ -101,7 +101,7 @@ export default function DashboardPage() {
         <KpiCard
           label="Pending quotes"
           value={pendingQuotes.length}
-          icon={FileClock}
+          icon={<FileClock className="h-5 w-5" />}
           tone="warning"
           trend={seededTrend(37, pendingQuotes.length)}
           deltaGoodDirection="down"
@@ -109,14 +109,14 @@ export default function DashboardPage() {
         <KpiCard
           label="Ready to bill / invoice"
           value={readyToBillOrInvoice.length}
-          icon={ReceiptText}
+          icon={<ReceiptText className="h-5 w-5" />}
           trend={seededTrend(53, readyToBillOrInvoice.length)}
           deltaGoodDirection="up"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1">
+        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">SLA health</h2>
           <p className="mt-1 text-xs text-muted">Across all open work orders</p>
           <div className="mt-4">
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1">
+        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">Work orders by phase</h2>
           <p className="mt-1 text-xs text-muted">All work orders, current phase family</p>
           <div className="mt-2">
@@ -132,7 +132,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1">
+        <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1 transition-shadow hover:shadow-md">
           <h2 className="text-sm font-semibold">Work orders by trade</h2>
           <p className="mt-1 text-xs text-muted">All work orders, by trade</p>
           <div className="mt-2">

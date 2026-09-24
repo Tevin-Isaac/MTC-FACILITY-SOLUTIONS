@@ -3,16 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   ClipboardList,
   Building2,
   Wrench,
-  Bell,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -51,14 +52,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-brand-gold text-brand-navy-dark"
-                    : "text-white/75 hover:bg-white/10 hover:text-white"
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  active ? "text-brand-navy-dark" : "text-white/75 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {label}
+                {active && (
+                  <motion.span
+                    layoutId="nav-active-pill"
+                    className="absolute inset-0 rounded-lg bg-brand-gold"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <Icon className="relative z-10 h-4 w-4" />
+                <span className="relative z-10">{label}</span>
               </Link>
             );
           })}
@@ -88,13 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-              type="button"
-              className="rounded-full p-2 text-muted hover:bg-black/5"
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-            </button>
+            <NotificationBell />
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-navy text-xs font-semibold text-white">
               MT
             </div>

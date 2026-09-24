@@ -32,9 +32,10 @@ Without Supabase credentials, the app runs fine on sample data (`src/lib/mock-da
    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
    SUPABASE_SERVICE_ROLE_KEY=...   # Settings → API → service_role — server-only, never expose client-side
    ```
-4. Restart `npm run dev`. Login is now enforced (`src/middleware.ts`) and `/login` is live.
+4. Restart `npm run dev`. Login is now enforced (`src/proxy.ts`) and `/login` is live.
 5. Create your first staff account: Authentication → Users → Add user in the Supabase dashboard (or sign up via a route you add later). A `profiles` row is created automatically on signup with role `coordinator` — update it to `owner` or `admin` for yourself directly in the table editor.
 6. On Vercel, add the same three variables under Project Settings → Environment Variables, then redeploy.
+7. **Authentication → URL Configuration**: set **Site URL** to your real deployed URL (e.g. `https://mtc-work-orders.vercel.app`), not `localhost` — every auth email (password reset, magic link) links back to this. Add the same URL + `/**` under **Redirect URLs**. Skipping this step sends every auth email to a dead `localhost` link.
 
 The app still reads from `src/lib/mock-data.ts` for now — connecting Supabase enables auth, but wiring the actual data fetching to Postgres (replacing the mock-data functions with real queries against the schema above) is the next step once a project exists.
 

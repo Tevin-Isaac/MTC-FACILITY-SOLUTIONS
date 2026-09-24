@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseIsConfigured } from "@/lib/supabase/env";
 
@@ -12,9 +13,40 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const configured = supabaseIsConfigured();
+
+  async function handleForgotPassword() {
+    setError(null);
+    if (!configured) {
+      setError("Supabase isn't connected yet.");
+      return;
+    }
+    if (!email) {
+      setError("Enter your email above first, then click \"Forgot password\".");
+      return;
+    }
+    setResetting(true);
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+      toast.success("Check your email", {
+        description: `A password reset link was sent to ${email}.`,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setResetting(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,9 +112,19 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="text-xs font-medium text-muted">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-xs font-medium text-muted">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetting}
+                className="text-xs font-medium text-brand-navy hover:underline disabled:opacity-50"
+              >
+                {resetting ? "Sending…" : "Forgot password?"}
+              </button>
+            </div>
             <input
               id="password"
               type="password"

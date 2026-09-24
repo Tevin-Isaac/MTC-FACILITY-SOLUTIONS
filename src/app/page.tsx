@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AuthHashRedirect } from "@/components/AuthHashRedirect";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-brand-navy px-6 text-center text-white">
+      <AuthHashRedirect />
       <div className="flex h-32 w-32 items-center justify-center rounded-full bg-white p-4 shadow-lg">
         <Image
           src="/mtc-logo.png"

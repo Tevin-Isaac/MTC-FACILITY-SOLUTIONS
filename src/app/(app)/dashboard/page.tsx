@@ -6,7 +6,7 @@ import {
   ReceiptText,
   ArrowRight,
 } from "lucide-react";
-import { StatCard } from "@/components/StatCard";
+import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge, PriorityBadge } from "@/components/Badge";
 import { CategoryBarChart } from "@/components/charts/CategoryBarChart";
 import { SlaDonut } from "@/components/charts/SlaDonut";
@@ -14,9 +14,11 @@ import {
   mockWorkOrders,
   accountForSite,
   siteById,
-  bucketForStatus,
+  phaseForStatus,
   slaRisk,
-  STATUS_BUCKETS,
+  slaCountdown,
+  seededTrend,
+  PHASE_FAMILIES,
 } from "@/lib/mock-data";
 import { TERMINAL_STATUSES } from "@/types/work-order";
 
@@ -34,10 +36,9 @@ export default function DashboardPage() {
     ["ready_to_bill", "ready_to_invoice"].includes(wo.status)
   );
 
-  const bucketCounts = STATUS_BUCKETS.map((bucket) => ({
-    label: bucket,
-    value: mockWorkOrders.filter((wo) => bucketForStatus(wo.status) === bucket)
-      .length,
+  const phaseCounts = PHASE_FAMILIES.map((phase) => ({
+    label: phase,
+    value: mockWorkOrders.filter((wo) => phaseForStatus(wo.status) === phase).length,
   }));
 
   const tradeCounts = Object.entries(
@@ -60,37 +61,57 @@ export default function DashboardPage() {
     .filter((r) => r.risk !== "on_track")
     .sort((a, b) => Number(b.risk === "breached") - Number(a.risk === "breached"));
 
-  const recent = [...mockWorkOrders]
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .slice(0, 5);
+  const overdueAr = readyToBillOrInvoice.reduce((sum, wo) => sum + (wo.nte ?? 0), 0);
+
+  const myQueue = [...openWorkOrders].sort((a, b) => {
+    const aCd = a.slaResolveBy ? new Date(a.slaResolveBy).getTime() : Infinity;
+    const bCd = b.slaResolveBy ? new Date(b.slaResolveBy).getTime() : Infinity;
+    return aCd - bCd;
+  });
+
+  const summary = `${slaCounts.breached + slaCounts.atRisk} WO${
+    slaCounts.breached + slaCounts.atRisk === 1 ? "" : "s"
+  } at SLA risk today, ${pendingQuotes.length} quote${
+    pendingQuotes.length === 1 ? "" : "s"
+  } awaiting client, $${overdueAr.toLocaleString()} ready to bill.`;
 
   return (
     <div className="flex flex-col gap-8 p-6 md:p-8">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">
-          Open work, SLA exposure, and what needs attention right now.
-        </p>
+        <h1 className="text-2xl font-semibold">Good afternoon, Tevin</h1>
+        <p className="mt-1 text-sm text-muted">{summary}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Open work orders" value={openWorkOrders.length} icon={ClipboardList} />
-        <StatCard
+        <KpiCard
+          label="Open work orders"
+          value={openWorkOrders.length}
+          icon={ClipboardList}
+          trend={seededTrend(11, openWorkOrders.length)}
+          deltaGoodDirection="down"
+        />
+        <KpiCard
           label="Emergency, open"
           value={emergencyOpen.length}
           icon={AlertTriangle}
           tone="danger"
+          trend={seededTrend(23, emergencyOpen.length)}
+          deltaGoodDirection="down"
         />
-        <StatCard
+        <KpiCard
           label="Pending quotes"
           value={pendingQuotes.length}
           icon={FileClock}
           tone="warning"
+          trend={seededTrend(37, pendingQuotes.length)}
+          deltaGoodDirection="down"
         />
-        <StatCard
+        <KpiCard
           label="Ready to bill / invoice"
           value={readyToBillOrInvoice.length}
           icon={ReceiptText}
+          trend={seededTrend(53, readyToBillOrInvoice.length)}
+          deltaGoodDirection="up"
         />
       </div>
 
@@ -104,10 +125,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-5 lg:col-span-1">
-          <h2 className="text-sm font-semibold">Work orders by stage</h2>
-          <p className="mt-1 text-xs text-muted">All work orders, current pipeline stage</p>
+          <h2 className="text-sm font-semibold">Work orders by phase</h2>
+          <p className="mt-1 text-xs text-muted">All work orders, current phase family</p>
           <div className="mt-2">
-            <CategoryBarChart data={bucketCounts} />
+            <CategoryBarChart data={phaseCounts} />
           </div>
         </div>
 
@@ -133,11 +154,10 @@ export default function DashboardPage() {
             {needsAttention.map(({ wo, risk }) => {
               const site = siteById(wo.siteId);
               return (
-                <li
-                  key={wo.id}
-                  className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm"
-                >
-                  <span className="font-medium">{wo.woNumber}</span>
+                <li key={wo.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
+                  <Link href={`/work-orders/${wo.id}`} className="font-medium tabular-nums hover:underline">
+                    {wo.woNumber}
+                  </Link>
                   <span className="text-muted">{site?.name}</span>
                   <PriorityBadge priority={wo.priority} />
                   <span
@@ -158,7 +178,7 @@ export default function DashboardPage() {
 
       <div className="rounded-xl border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold">Recent work orders</h2>
+          <h2 className="text-sm font-semibold">My queue</h2>
           <Link
             href="/work-orders"
             className="inline-flex items-center gap-1 text-sm font-medium text-brand-navy underline-offset-4 hover:underline"
@@ -169,23 +189,30 @@ export default function DashboardPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-180 text-left text-sm">
+          <table className="w-full min-w-200 text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                 <th className="px-5 py-3 font-medium">WO #</th>
                 <th className="px-5 py-3 font-medium">Site</th>
                 <th className="px-5 py-3 font-medium">Trade</th>
                 <th className="px-5 py-3 font-medium">Priority</th>
+                <th className="px-5 py-3 font-medium">SLA</th>
                 <th className="px-5 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {recent.map((wo) => {
+              {myQueue.slice(0, 6).map((wo) => {
                 const site = siteById(wo.siteId);
                 const account = accountForSite(wo.siteId);
+                const countdown = slaCountdown(wo);
+                const risk = slaRisk(wo);
                 return (
                   <tr key={wo.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-3 font-medium">{wo.woNumber}</td>
+                    <td className="px-5 py-3 font-medium tabular-nums">
+                      <Link href={`/work-orders/${wo.id}`} className="hover:underline">
+                        {wo.woNumber}
+                      </Link>
+                    </td>
                     <td className="px-5 py-3">
                       <div>{site?.name}</div>
                       <div className="text-xs text-muted">{account?.name}</div>
@@ -193,6 +220,23 @@ export default function DashboardPage() {
                     <td className="px-5 py-3 capitalize">{wo.trade.replace(/_/g, " ")}</td>
                     <td className="px-5 py-3">
                       <PriorityBadge priority={wo.priority} />
+                    </td>
+                    <td className="px-5 py-3">
+                      {countdown ? (
+                        <span
+                          className={
+                            risk === "breached"
+                              ? "font-medium text-status-critical"
+                              : risk === "at_risk"
+                                ? "font-medium text-status-warning"
+                                : "text-muted"
+                          }
+                        >
+                          {countdown}
+                        </span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-3">
                       <StatusBadge status={wo.status} />

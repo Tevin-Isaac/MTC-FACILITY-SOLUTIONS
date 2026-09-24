@@ -1,21 +1,51 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Plus, LayoutGrid, List } from "lucide-react";
-import { StatusBadge, PriorityBadge } from "@/components/Badge";
+import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
 import { WorkOrderBoard } from "@/components/WorkOrderBoard";
 import {
   mockWorkOrders,
   accountForSite,
   siteById,
   vendorById,
+  slaRisk,
 } from "@/lib/mock-data";
+import type { WorkOrder } from "@/types/work-order";
+import { TERMINAL_STATUSES } from "@/types/work-order";
+
+type SavedView = "all" | "breaching" | "needs_vendor" | "quote_with_client" | "ready_to_bill";
+
+const SAVED_VIEWS: { key: SavedView; label: string }[] = [
+  { key: "all", label: "All work orders" },
+  { key: "breaching", label: "Breaching SLA" },
+  { key: "needs_vendor", label: "Needs vendor" },
+  { key: "quote_with_client", label: "Quote with client" },
+  { key: "ready_to_bill", label: "Ready to bill" },
+];
+
+function matchesView(wo: WorkOrder, view: SavedView): boolean {
+  switch (view) {
+    case "breaching":
+      return slaRisk(wo) !== "on_track";
+    case "needs_vendor":
+      return !wo.vendorId && !TERMINAL_STATUSES.includes(wo.status);
+    case "quote_with_client":
+      return wo.status === "quote_with_client";
+    case "ready_to_bill":
+      return wo.status === "ready_to_bill";
+    default:
+      return true;
+  }
+}
 
 export default function WorkOrdersPage() {
   const [view, setView] = useState<"list" | "board">("board");
-  const rows = [...mockWorkOrders].sort((a, b) =>
-    a.createdAt < b.createdAt ? 1 : -1
-  );
+  const [savedView, setSavedView] = useState<SavedView>("all");
+
+  const all = [...mockWorkOrders].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const rows = all.filter((wo) => matchesView(wo, savedView));
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -23,7 +53,7 @@ export default function WorkOrdersPage() {
         <div>
           <h1 className="text-2xl font-semibold">Work Orders</h1>
           <p className="mt-1 text-sm text-muted">
-            {rows.length} total, across all accounts.
+            {rows.length} of {all.length} total, across all accounts.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -63,6 +93,23 @@ export default function WorkOrdersPage() {
         </div>
       </div>
 
+      <div className="flex gap-1 overflow-x-auto border-b border-border">
+        {SAVED_VIEWS.map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            onClick={() => setSavedView(v.key)}
+            className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              savedView === v.key
+                ? "border-brand-gold text-foreground"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       {view === "board" ? (
         <WorkOrderBoard initialWorkOrders={rows} />
       ) : (
@@ -90,7 +137,11 @@ export default function WorkOrdersPage() {
                       key={wo.id}
                       className="border-b border-border last:border-0 hover:bg-black/2"
                     >
-                      <td className="px-5 py-3 font-medium">{wo.woNumber}</td>
+                      <td className="px-5 py-3 font-medium tabular-nums">
+                        <Link href={`/work-orders/${wo.id}`} className="hover:underline">
+                          {wo.woNumber}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3">
                         <div>{site?.name}</div>
                         <div className="text-xs text-muted">{account?.name}</div>
@@ -99,14 +150,17 @@ export default function WorkOrdersPage() {
                         {wo.trade.replace(/_/g, " ")}
                       </td>
                       <td className="px-5 py-3">{vendor?.name ?? "Unassigned"}</td>
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3 tabular-nums">
                         {wo.nte != null ? `$${wo.nte.toLocaleString()}` : "—"}
                       </td>
                       <td className="px-5 py-3">
                         <PriorityBadge priority={wo.priority} />
                       </td>
                       <td className="px-5 py-3">
-                        <StatusBadge status={wo.status} />
+                        <div className="flex flex-wrap gap-1.5">
+                          <StatusBadge status={wo.status} />
+                          <ExceptionFlag wo={wo} />
+                        </div>
                       </td>
                     </tr>
                   );

@@ -63,71 +63,122 @@ export const STATUS_LABEL: Record<WorkOrderStatus, string> = {
   on_hold: "On Hold",
 };
 
-// Buckets group the granular status list into stages meaningful for a
-// board/chart view, matching MTC's documented workflow.
-export type StatusBucket =
-  | "New & Dispatch"
-  | "In Progress"
-  | "Quoting"
-  | "Quality Review"
-  | "Ready to Bill"
+// Phase families group the granular status list into the 7 stages that
+// matter for a board/chart view — see reference_dashboard_design_ideas
+// memory. Exceptions (on_hold, etc.) are flags layered on a status, not a
+// separate phase, so the family list itself stays at 6.
+export type PhaseFamily =
+  | "Intake"
+  | "Dispatch"
+  | "Quote"
+  | "Completion"
+  | "Billing"
   | "Closed";
 
-const BUCKET_BY_STATUS: Record<WorkOrderStatus, StatusBucket> = {
-  new: "New & Dispatch",
-  assigned: "New & Dispatch",
-  schedule_confirmed: "New & Dispatch",
-  tech_onsite: "In Progress",
-  work_completed: "In Progress",
-  pending_documentation: "In Progress",
-  pending_quote: "Quoting",
-  quote_with_client: "Quoting",
-  quote_approved: "Quoting",
-  quote_declined: "Quoting",
-  in_quality_assurance: "Quality Review",
-  ready_to_bill: "Ready to Bill",
-  ready_to_invoice: "Ready to Bill",
-  invoiced: "Ready to Bill",
-  paid: "Closed",
-  closed: "Closed",
-  complete_no_charge: "Closed",
-  cancelled: "Closed",
-  on_hold: "In Progress",
-};
-
-export const STATUS_BUCKETS: StatusBucket[] = [
-  "New & Dispatch",
-  "In Progress",
-  "Quoting",
-  "Quality Review",
-  "Ready to Bill",
+export const PHASE_FAMILIES: PhaseFamily[] = [
+  "Intake",
+  "Dispatch",
+  "Quote",
+  "Completion",
+  "Billing",
   "Closed",
 ];
 
-// Representative status used when a card is moved into a bucket on the board.
-export const BUCKET_DEFAULT_STATUS: Record<StatusBucket, WorkOrderStatus> = {
-  "New & Dispatch": "assigned",
-  "In Progress": "tech_onsite",
-  Quoting: "pending_quote",
-  "Quality Review": "in_quality_assurance",
-  "Ready to Bill": "ready_to_bill",
+export const PHASE_COLOR: Record<PhaseFamily, string> = {
+  Intake: "var(--phase-intake)",
+  Dispatch: "var(--phase-dispatch)",
+  Quote: "var(--phase-quote)",
+  Completion: "var(--phase-completion)",
+  Billing: "var(--phase-billing)",
+  Closed: "var(--phase-closed)",
+};
+
+const PHASE_BY_STATUS: Record<WorkOrderStatus, PhaseFamily> = {
+  new: "Intake",
+  assigned: "Dispatch",
+  schedule_confirmed: "Dispatch",
+  tech_onsite: "Dispatch",
+  on_hold: "Dispatch",
+  pending_quote: "Quote",
+  quote_with_client: "Quote",
+  quote_approved: "Quote",
+  quote_declined: "Quote",
+  work_completed: "Completion",
+  pending_documentation: "Completion",
+  in_quality_assurance: "Completion",
+  ready_to_bill: "Billing",
+  ready_to_invoice: "Billing",
+  invoiced: "Billing",
+  paid: "Billing",
+  closed: "Closed",
+  complete_no_charge: "Closed",
+  cancelled: "Closed",
+};
+
+// Representative status used when a card is moved into a phase on the board.
+export const PHASE_DEFAULT_STATUS: Record<PhaseFamily, WorkOrderStatus> = {
+  Intake: "new",
+  Dispatch: "assigned",
+  Quote: "pending_quote",
+  Completion: "in_quality_assurance",
+  Billing: "ready_to_bill",
   Closed: "closed",
 };
 
-export function bucketForStatus(status: WorkOrderStatus): StatusBucket {
-  return BUCKET_BY_STATUS[status];
+export function phaseForStatus(status: WorkOrderStatus): PhaseFamily {
+  return PHASE_BY_STATUS[status];
+}
+
+// Exception statuses render as an amber flag on top of their normal phase,
+// rather than pulling the work order into a separate "exception" column.
+const EXCEPTION_STATUSES: WorkOrderStatus[] = ["on_hold"];
+
+export function isException(wo: WorkOrder): boolean {
+  return EXCEPTION_STATUSES.includes(wo.status);
 }
 
 export type SlaRisk = "on_track" | "at_risk" | "breached";
 
 export function slaRisk(wo: WorkOrder, now: Date = new Date()): SlaRisk {
-  if (bucketForStatus(wo.status) === "Closed") return "on_track";
+  if (phaseForStatus(wo.status) === "Closed") return "on_track";
   if (!wo.slaResolveBy) return "on_track";
   const resolveBy = new Date(wo.slaResolveBy).getTime();
   const hoursRemaining = (resolveBy - now.getTime()) / 3_600_000;
   if (hoursRemaining < 0) return "breached";
   if (hoursRemaining <= 4) return "at_risk";
   return "on_track";
+}
+
+// Human-readable SLA countdown, e.g. "2h 14m left" or "1h 5m overdue".
+export function slaCountdown(wo: WorkOrder, now: Date = new Date()): string | null {
+  if (!wo.slaResolveBy) return null;
+  const diffMs = new Date(wo.slaResolveBy).getTime() - now.getTime();
+  const overdue = diffMs < 0;
+  const totalMinutes = Math.round(Math.abs(diffMs) / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const label = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return overdue ? `${label} overdue` : `${label} left`;
+}
+
+// Deterministic pseudo-trend ending exactly at `current`, for KPI
+// sparklines. Not real history (no time-series backend yet) — a seeded
+// generator instead of Math.random() so it's reproducible and doesn't
+// differ between renders.
+export function seededTrend(seed: number, current: number, points = 7): number[] {
+  let x = seed || 1;
+  const rand = () => {
+    x = (x * 9301 + 49297) % 233280;
+    return x / 233280;
+  };
+  const arr: number[] = new Array(points).fill(current);
+  let v = current;
+  for (let i = points - 2; i >= 0; i--) {
+    v = Math.max(0, Math.round(v + (rand() - 0.5) * 2));
+    arr[i] = v;
+  }
+  arr[points - 1] = current;
+  return arr;
 }
 
 export function accountForSite(siteId: string): Account | undefined {
@@ -143,4 +194,40 @@ export function siteById(siteId: string): Site | undefined {
 export function vendorById(vendorId: string | null): Vendor | undefined {
   if (!vendorId) return undefined;
   return mockVendors.find((v) => v.id === vendorId);
+}
+
+export function workOrderById(id: string): WorkOrder | undefined {
+  return mockWorkOrders.find((wo) => wo.id === id);
+}
+
+export function vendorsForTrade(trade: WorkOrder["trade"]): Vendor[] {
+  return [...mockVendors]
+    .filter((v) => v.active)
+    .sort((a, b) => {
+      const aMatch = a.trades.includes(trade) ? 0 : 1;
+      const bMatch = b.trades.includes(trade) ? 0 : 1;
+      if (aMatch !== bMatch) return aMatch - bMatch;
+      return (a.rateCardHourly ?? 0) - (b.rateCardHourly ?? 0);
+    });
+}
+
+// Next-step button label, context-aware per the WO's current status.
+export function nextStepLabel(status: WorkOrderStatus): string {
+  const map: Partial<Record<WorkOrderStatus, string>> = {
+    new: "Assign vendor",
+    assigned: "Confirm schedule",
+    schedule_confirmed: "Mark tech onsite",
+    tech_onsite: "Mark work completed",
+    pending_quote: "Build quote",
+    quote_with_client: "Record client decision",
+    quote_approved: "Schedule repair",
+    work_completed: "Upload documentation",
+    pending_documentation: "Submit for QA",
+    in_quality_assurance: "Approve for billing",
+    ready_to_bill: "Create invoice",
+    ready_to_invoice: "Send invoice",
+    invoiced: "Record payment",
+    on_hold: "Resume work order",
+  };
+  return map[status] ?? "Update status";
 }

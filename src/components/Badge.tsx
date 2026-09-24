@@ -1,36 +1,29 @@
-import type { Priority, WorkOrderStatus } from "@/types/work-order";
-import { STATUS_LABEL } from "@/lib/mock-data";
+import type { Priority, WorkOrder, WorkOrderStatus } from "@/types/work-order";
+import { STATUS_LABEL, phaseForStatus, isException, PHASE_COLOR } from "@/lib/mock-data";
+import { AlertTriangle } from "lucide-react";
 
-const STATUS_STYLES: Partial<Record<WorkOrderStatus, string>> = {
-  new: "bg-zinc-100 text-zinc-700",
-  assigned: "bg-blue-50 text-blue-700",
-  schedule_confirmed: "bg-blue-50 text-blue-700",
-  tech_onsite: "bg-indigo-50 text-indigo-700",
-  pending_quote: "bg-amber-50 text-amber-800",
-  quote_with_client: "bg-amber-50 text-amber-800",
-  quote_approved: "bg-emerald-50 text-emerald-700",
-  quote_declined: "bg-red-50 text-red-700",
-  work_completed: "bg-indigo-50 text-indigo-700",
-  pending_documentation: "bg-amber-50 text-amber-800",
-  in_quality_assurance: "bg-purple-50 text-purple-700",
-  ready_to_bill: "bg-emerald-50 text-emerald-700",
-  ready_to_invoice: "bg-emerald-50 text-emerald-700",
-  invoiced: "bg-emerald-50 text-emerald-700",
-  paid: "bg-emerald-100 text-emerald-800",
-  closed: "bg-zinc-100 text-zinc-500",
-  complete_no_charge: "bg-zinc-100 text-zinc-500",
-  cancelled: "bg-zinc-100 text-zinc-400 line-through",
-  on_hold: "bg-orange-50 text-orange-700",
-};
-
+// Status chip: shows the specific stage name, colored by its phase family
+// so the family reads at a glance across 18 granular statuses.
 export function StatusBadge({ status }: { status: WorkOrderStatus }) {
+  const color = PHASE_COLOR[phaseForStatus(status)];
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-        STATUS_STYLES[status] ?? "bg-zinc-100 text-zinc-700"
-      }`}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+      style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
     >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
       {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+// Exception flag: layered on top of the status, not a separate stage.
+export function ExceptionFlag({ wo }: { wo: WorkOrder }) {
+  if (!isException(wo)) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-phase-exception/15 px-2 py-0.5 text-[11px] font-medium text-phase-exception">
+      <AlertTriangle className="h-3 w-3" />
+      On hold
     </span>
   );
 }

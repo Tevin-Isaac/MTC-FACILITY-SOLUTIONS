@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8fa;
-  --foreground: #0b1e3c;
+  --background: #f6f7f9;
+  --foreground: #14171f;
   --surface: #ffffff;
-  --border: #e2e5ec;
+  --raised: #ffffff;
+  --border: #e4e7ec;
   --muted: #5b6474;
 
   --brand-navy: #0b1e3c;
@@ -19,12 +20,24 @@
   --status-warning: #fab219;
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
+
+  /* Phase-family status colors: group the granular pipeline into 7
+     meaningful families, one hue each, distinct from chart/status colors.
+     See docs/data-model.md and reference_dashboard_design_ideas memory. */
+  --phase-intake: #64748b;
+  --phase-dispatch: #2563eb;
+  --phase-quote: #7c3aed;
+  --phase-completion: #0d9488;
+  --phase-billing: #059669;
+  --phase-closed: #9ca3af;
+  --phase-exception: #f59e0b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-brand-navy: var(--brand-navy);
@@ -35,16 +48,24 @@
   --color-status-warning: var(--status-warning);
   --color-status-serious: var(--status-serious);
   --color-status-critical: var(--status-critical);
-  --font-sans: var(--font-geist-sans);
+  --color-phase-intake: var(--phase-intake);
+  --color-phase-dispatch: var(--phase-dispatch);
+  --color-phase-quote: var(--phase-quote);
+  --color-phase-completion: var(--phase-completion);
+  --color-phase-billing: var(--phase-billing);
+  --color-phase-closed: var(--phase-closed);
+  --color-phase-exception: var(--phase-exception);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #060d1d;
+    --background: #0b0d12;
     --foreground: #eef1f6;
-    --surface: #0b1e3c;
-    --border: #1c2c4a;
+    --surface: #12151c;
+    --raised: #1a1e27;
+    --border: #262b36;
     --muted: #93a0b8;
     --chart-sequential: #3987e5;
     --chart-grid: #2c2c2a;
@@ -52,10 +73,11 @@
 }
 
 :root[data-theme="dark"] {
-  --background: #060d1d;
+  --background: #0b0d12;
   --foreground: #eef1f6;
-  --surface: #0b1e3c;
-  --border: #1c2c4a;
+  --surface: #12151c;
+  --raised: #1a1e27;
+  --border: #262b36;
   --muted: #93a0b8;
   --chart-sequential: #3987e5;
   --chart-grid: #2c2c2a;
@@ -65,4 +87,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

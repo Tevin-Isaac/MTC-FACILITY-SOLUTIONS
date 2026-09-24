@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -82,7 +83,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <span className="text-sm font-semibold">MTC</span>
           </div>
-          <div className="hidden md:block" />
+          <div className="hidden md:block">
+            <CommandPalette />
+          </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <button

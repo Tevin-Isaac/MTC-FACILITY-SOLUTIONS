@@ -14,9 +14,6 @@ import {
 } from "lucide-react";
 import type { WorkOrder } from "@/types/work-order";
 import {
-  accountForSite,
-  siteById,
-  vendorById,
   slaRisk,
   slaCountdown,
   nextStepLabel,
@@ -24,13 +21,15 @@ import {
   vendorComplianceStatus,
   quoteLineItems,
   estimatedMargin,
-} from "@/lib/mock-data";
+} from "@/lib/domain";
+import { useAppData } from "@/components/AppDataProvider";
 import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
 import { PhaseProgressBar } from "@/components/PhaseProgressBar";
 import { AssignVendorDrawer } from "@/components/AssignVendorDrawer";
 
 export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOrder }) {
   const [wo, setWo] = useState(initialWorkOrder);
+  const { siteById, accountForSite, vendorById } = useAppData();
   const site = siteById(wo.siteId);
   const account = accountForSite(wo.siteId);
   const vendor = vendorById(wo.vendorId);

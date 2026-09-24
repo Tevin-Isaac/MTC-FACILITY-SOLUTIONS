@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { X, ShieldCheck, ShieldAlert, ShieldX, Star, UserRoundCog } from "lucide-react";
 import type { Trade } from "@/types/work-order";
-import { vendorsForTrade, vendorComplianceStatus } from "@/lib/mock-data";
+import { vendorComplianceStatus } from "@/lib/domain";
+import { useAppData } from "@/components/AppDataProvider";
 
 export function AssignVendorDrawer({
   trade,
@@ -17,6 +18,7 @@ export function AssignVendorDrawer({
   onAssign: (vendorId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { vendorsForTrade } = useAppData();
   const vendors = vendorsForTrade(trade);
 
   return (

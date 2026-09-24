@@ -1,4 +1,4 @@
-import { PHASE_FAMILIES, PHASE_COLOR, phaseForStatus } from "@/lib/mock-data";
+import { PHASE_FAMILIES, PHASE_COLOR, phaseForStatus } from "@/lib/domain";
 import type { WorkOrderStatus } from "@/types/work-order";
 
 export function PhaseProgressBar({ status }: { status: WorkOrderStatus }) {

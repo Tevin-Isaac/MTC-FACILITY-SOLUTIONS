@@ -1,7 +1,9 @@
 import { Wrench, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
-import { mockVendors, vendorComplianceStatus } from "@/lib/mock-data";
+import { vendorComplianceStatus } from "@/lib/domain";
+import { getVendors } from "@/lib/data/queries";
 
-export default function VendorsPage() {
+export default async function VendorsPage() {
+  const vendors = await getVendors();
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
       <div>
@@ -25,7 +27,7 @@ export default function VendorsPage() {
               </tr>
             </thead>
             <tbody>
-              {mockVendors.map((vendor) => {
+              {vendors.map((vendor) => {
                 const status = vendorComplianceStatus(vendor);
                 const dateClass =
                   status === "expired"

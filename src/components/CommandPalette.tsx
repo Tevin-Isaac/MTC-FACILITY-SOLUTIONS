@@ -15,11 +15,12 @@ import {
   Sun,
   Search,
 } from "lucide-react";
-import { mockWorkOrders } from "@/lib/mock-data";
+import { useAppData } from "@/components/AppDataProvider";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { workOrders } = useAppData();
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -106,7 +107,7 @@ export function CommandPalette() {
                 </Command.Group>
 
                 <Command.Group heading="Work orders" className="text-xs font-medium text-muted [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5">
-                  {mockWorkOrders.map((wo) => (
+                  {workOrders.map((wo) => (
                     <PaletteItem
                       key={wo.id}
                       icon={ClipboardList}

@@ -9,11 +9,9 @@ import {
   PHASE_DEFAULT_STATUS,
   PHASE_COLOR,
   phaseForStatus,
-  accountForSite,
-  siteById,
-  vendorById,
   type PhaseFamily,
-} from "@/lib/mock-data";
+} from "@/lib/domain";
+import { useAppData } from "@/components/AppDataProvider";
 import { PriorityBadge, ExceptionFlag } from "@/components/Badge";
 import { GripVertical } from "lucide-react";
 
@@ -25,6 +23,7 @@ export function WorkOrderBoard({
   const [workOrders, setWorkOrders] = useState(initialWorkOrders);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverPhase, setDragOverPhase] = useState<PhaseFamily | null>(null);
+  const { siteById, accountForSite, vendorById } = useAppData();
 
   function moveTo(id: string, phase: PhaseFamily) {
     let moved: WorkOrder | undefined;

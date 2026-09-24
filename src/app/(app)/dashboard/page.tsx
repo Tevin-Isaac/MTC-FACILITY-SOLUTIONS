@@ -12,19 +12,23 @@ import { StatusBadge, PriorityBadge } from "@/components/Badge";
 import { CategoryBarChart } from "@/components/charts/CategoryBarChart";
 import { SlaDonut } from "@/components/charts/SlaDonut";
 import {
-  mockWorkOrders,
-  accountForSite,
-  siteById,
+  accountForSite as accountForSiteFn,
+  siteById as siteByIdFn,
   phaseForStatus,
   slaRisk,
   slaCountdown,
   seededTrend,
   PHASE_FAMILIES,
-} from "@/lib/mock-data";
+} from "@/lib/domain";
+import { getAppData } from "@/lib/data/queries";
 import { TERMINAL_STATUSES } from "@/types/work-order";
 
-export default function DashboardPage() {
-  const openWorkOrders = mockWorkOrders.filter(
+export default async function DashboardPage() {
+  const { accounts, sites, workOrders: allWorkOrders } = await getAppData();
+  const siteById = (id: string) => siteByIdFn(sites, id);
+  const accountForSite = (id: string) => accountForSiteFn(sites, accounts, id);
+
+  const openWorkOrders = allWorkOrders.filter(
     (wo) => !TERMINAL_STATUSES.includes(wo.status)
   );
   const emergencyOpen = openWorkOrders.filter((wo) =>
@@ -33,17 +37,17 @@ export default function DashboardPage() {
   const pendingQuotes = openWorkOrders.filter((wo) =>
     ["pending_quote", "quote_with_client"].includes(wo.status)
   );
-  const readyToBillOrInvoice = mockWorkOrders.filter((wo) =>
+  const readyToBillOrInvoice = allWorkOrders.filter((wo) =>
     ["ready_to_bill", "ready_to_invoice"].includes(wo.status)
   );
 
   const phaseCounts = PHASE_FAMILIES.map((phase) => ({
     label: phase,
-    value: mockWorkOrders.filter((wo) => phaseForStatus(wo.status) === phase).length,
+    value: allWorkOrders.filter((wo) => phaseForStatus(wo.status) === phase).length,
   }));
 
   const tradeCounts = Object.entries(
-    mockWorkOrders.reduce<Record<string, number>>((acc, wo) => {
+    allWorkOrders.reduce<Record<string, number>>((acc, wo) => {
       const label = wo.trade.replace(/_/g, " ");
       acc[label] = (acc[label] ?? 0) + 1;
       return acc;

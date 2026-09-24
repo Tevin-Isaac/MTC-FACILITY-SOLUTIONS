@@ -1,20 +1,22 @@
 import { Building2 } from "lucide-react";
-import { mockAccounts, mockSites } from "@/lib/mock-data";
+import { getAccounts, getSites } from "@/lib/data/queries";
 
-export default function ClientsPage() {
+export default async function ClientsPage() {
+  const [accounts, sites] = await Promise.all([getAccounts(), getSites()]);
+
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
       <div>
         <h1 className="text-2xl font-semibold">Clients</h1>
         <p className="mt-1 text-sm text-muted">
-          Accounts and their sites. {mockAccounts.length} accounts,{" "}
-          {mockSites.length} sites.
+          Accounts and their sites. {accounts.length} accounts,{" "}
+          {sites.length} sites.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {mockAccounts.map((account) => {
-          const sites = mockSites.filter((s) => s.accountId === account.id);
+        {accounts.map((account) => {
+          const accountSites = sites.filter((s) => s.accountId === account.id);
           return (
             <div
               key={account.id}
@@ -31,10 +33,10 @@ export default function ClientsPage() {
               </div>
 
               <ul className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-                {sites.length === 0 && (
+                {accountSites.length === 0 && (
                   <li className="text-sm text-muted">No sites on file.</li>
                 )}
-                {sites.map((site) => (
+                {accountSites.map((site) => (
                   <li key={site.id} className="text-sm">
                     <p className="font-medium">{site.name}</p>
                     <p className="text-xs text-muted">{site.address}</p>

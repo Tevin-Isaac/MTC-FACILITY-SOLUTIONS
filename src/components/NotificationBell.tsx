@@ -4,18 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, AlertTriangle, AlertOctagon } from "lucide-react";
-import {
-  mockWorkOrders,
-  siteById,
-  slaRisk,
-  slaCountdown,
-} from "@/lib/mock-data";
+import { slaRisk, slaCountdown } from "@/lib/domain";
+import { useAppData } from "@/components/AppDataProvider";
 import { TERMINAL_STATUSES } from "@/types/work-order";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const { workOrders, siteById } = useAppData();
 
-  const alerts = mockWorkOrders
+  const alerts = workOrders
     .filter((wo) => !TERMINAL_STATUSES.includes(wo.status))
     .map((wo) => ({ wo, risk: slaRisk(wo) }))
     .filter((a) => a.risk !== "on_track")

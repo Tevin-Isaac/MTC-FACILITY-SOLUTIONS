@@ -1,5 +1,5 @@
 import type { Priority, WorkOrder, WorkOrderStatus } from "@/types/work-order";
-import { STATUS_LABEL, phaseForStatus, isException, PHASE_COLOR } from "@/lib/mock-data";
+import { STATUS_LABEL, phaseForStatus, isException, PHASE_COLOR } from "@/lib/domain";
 import { AlertTriangle } from "lucide-react";
 
 // Status chip: shows the specific stage name, colored by its phase family

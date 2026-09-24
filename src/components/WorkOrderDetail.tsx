@@ -57,12 +57,22 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
               {wo.poNumber && (
                 <span className="text-xs text-muted tabular-nums">· PO {wo.poNumber}</span>
               )}
+              {wo.externalTrackingNumber && (
+                <span className="text-xs text-muted tabular-nums">
+                  · SC {wo.externalTrackingNumber}
+                </span>
+              )}
             </div>
             <p className="mt-1 text-sm text-muted">{wo.description}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <PriorityBadge priority={wo.priority} />
               <StatusBadge status={wo.status} />
               <ExceptionFlag wo={wo} />
+              {wo.clientExtendedStatus && (
+                <span className="text-xs text-muted">
+                  Client status: {wo.clientExtendedStatus}
+                </span>
+              )}
             </div>
           </div>
 
@@ -208,6 +218,16 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                 {site.contactName} · {site.contactPhone}
               </div>
             )}
+            {wo.reporterName && (
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted">
+                  Reporter <span className="font-normal">(internal only — never shown to vendors)</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {wo.reporterName} · {wo.reporterCell}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-border bg-surface p-5">
@@ -256,6 +276,25 @@ export function WorkOrderDetail({ initialWorkOrder }: { initialWorkOrder: WorkOr
                 </dd>
               </div>
             </dl>
+            {wo.nteHistory.length > 0 && (
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted">NTE increases</p>
+                <ul className="mt-2 flex flex-col gap-2">
+                  {wo.nteHistory.map((inc, i) => (
+                    <li key={i} className="text-xs">
+                      <span className="font-medium tabular-nums">
+                        ${inc.amount.toLocaleString()}
+                      </span>{" "}
+                      <span className="text-muted">
+                        approved by {inc.approvedBy} via {inc.method},{" "}
+                        {new Date(inc.approvedAt).toLocaleString()}
+                      </span>
+                      {inc.note && <p className="mt-0.5 text-muted">{inc.note}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>

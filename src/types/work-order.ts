@@ -4,6 +4,13 @@
 // - single lifecycle, not duplicated pipelines/tags
 // - NTE (vendor-side) and DNE (client-side) as first-class fields
 // - sites as their own entity under an account, not flattened into "clients"
+//
+// Intake and lifecycle fields below also reflect how work orders actually
+// arrive and move today, via ServiceChannel (see docs/data-model.md and the
+// reference_servicechannel_workflow memory) — most commercial WOs come in
+// through ServiceChannel's Contractor Console, get an initial NTE from the
+// client, and move through client-specific extended statuses on top of our
+// own phase families.
 
 export type ClientType = "commercial" | "residential";
 
@@ -88,6 +95,20 @@ export interface Vendor {
   active: boolean;
 }
 
+export type WorkOrderSource = "service_channel" | "outlook_email" | "phone" | "manual";
+
+export type WorkOrderCategory = "building_rm" | "capex" | "maintenance";
+
+// A verbal or written NTE increase, logged as it happens — the real
+// workflow runs on phone-approved increases before any formal proposal.
+export interface NteIncrease {
+  amount: number;
+  approvedBy: string;
+  approvedAt: string;
+  method: "phone" | "email" | "sms";
+  note: string | null;
+}
+
 export interface WorkOrder {
   id: string;
   woNumber: string;
@@ -100,11 +121,24 @@ export interface WorkOrder {
   poNumber: string | null;
   nte: number | null; // Not-to-Exceed: vendor-side authorization limit
   dne: number | null; // Do-Not-Exceed: client-approved spending limit
+  nteHistory: NteIncrease[];
   vendorId: string | null;
   slaRespondBy: string | null;
   slaResolveBy: string | null;
   createdAt: string;
   closedAt: string | null;
+
+  // Intake/external-system fields (see comment above).
+  source: WorkOrderSource;
+  externalTrackingNumber: string | null; // ServiceChannel WO tracking #
+  clientExtendedStatus: string | null; // pass-through client status (e.g. "UNDER REVIEW BY BBTS PM P1")
+  category: WorkOrderCategory | null;
+  glCode: string | null;
+
+  // Parsed from the store request form (ServiceChannel jams these into a
+  // slash-joined description) — contact data, never shown to vendors.
+  reporterName: string | null;
+  reporterCell: string | null;
 }
 
 export interface QuoteLineItem {
@@ -132,7 +166,9 @@ export interface CompletionRecord {
   workOrderId: string;
   beforePhotoUrls: string[];
   afterPhotoUrls: string[];
+  afterVideoUrl: string | null;
   technicianNotes: string | null;
+  rootCause: string | null;
   signOffName: string | null;
   signOffSignatureUrl: string | null;
   signOffAt: string | null;

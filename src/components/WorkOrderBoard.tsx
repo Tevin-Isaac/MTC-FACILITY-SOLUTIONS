@@ -17,7 +17,7 @@ import {
   type PhaseFamily,
 } from "@/lib/domain";
 import { useAppData } from "@/components/AppDataProvider";
-import { PriorityBadge, ExceptionFlag } from "@/components/Badge";
+import { PriorityBadge, ExceptionFlag, JobKindBadge } from "@/components/Badge";
 import { changeStatus } from "@/lib/actions/work-orders";
 import { useAction } from "@/components/useAction";
 import { WorkOrderQuickView } from "@/components/WorkOrderQuickView";
@@ -139,6 +139,7 @@ export function WorkOrderBoard({ workOrders }: { workOrders: WorkOrder[] }) {
                     <p className="mt-2.5 line-clamp-2 text-xs text-ink-2">{wo.description}</p>
 
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <JobKindBadge type={account?.type} />
                       <PriorityBadge priority={wo.priority} />
                       <ExceptionFlag wo={wo} />
                       {countdown && risk !== "on_track" && (

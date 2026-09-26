@@ -11,7 +11,6 @@ import {
   ShieldX,
   Plus,
   Lock,
-  Eye,
   ArrowRight,
   FileText,
   UserRoundCog,
@@ -21,28 +20,29 @@ import {
   PenLine,
 } from "lucide-react";
 import type { CompletionRecord, Invoice, WorkOrder } from "@/types/work-order";
+import type { WorkOrderQuote } from "@/lib/quote";
 import {
   slaRisk,
   slaCountdown,
   nextStepLabel,
   nextStatusFor,
-  phaseForStatus,
   vendorComplianceStatus,
-  quoteLineItems,
   estimatedMargin,
   STATUS_LABEL,
 } from "@/lib/domain";
 import type { WorkOrderEvent, WorkOrderNote } from "@/lib/data/queries";
+import { EstimatePanel } from "@/components/EstimatePanel";
+import { WorkOrderThread } from "@/components/WorkOrderThread";
+import { DeliveryPanel } from "@/components/DeliveryPanel";
+import { WorkOrderSync } from "@/components/WorkOrderSync";
 import { useAppData } from "@/components/AppDataProvider";
-import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
+import { StatusBadge, PriorityBadge, ExceptionFlag, JobKindBadge } from "@/components/Badge";
 import { PhaseProgressBar } from "@/components/PhaseProgressBar";
 import { AssignVendorDrawer } from "@/components/AssignVendorDrawer";
 import {
   changeStatus,
-  addNote,
   raiseNte,
   recordQuoteDecision,
-  recordSignOff,
 } from "@/lib/actions/work-orders";
 import { useAction } from "@/components/useAction";
 import {
@@ -51,7 +51,6 @@ import {
   Pill,
   Field,
   Money,
-  Empty,
   buttonClass,
   inputClass,
   labelClass,
@@ -85,12 +84,20 @@ export function WorkOrderDetail({
   notes,
   invoices,
   completion,
+  quote,
+  estimateSharePath,
+  invoiceSharePath,
+  deliverySharePath,
 }: {
   workOrder: WorkOrder;
   events: WorkOrderEvent[];
   notes: WorkOrderNote[];
   invoices: Invoice[];
   completion: CompletionRecord | null;
+  quote: WorkOrderQuote | null;
+  estimateSharePath: string | null;
+  invoiceSharePath: string | null;
+  deliverySharePath: string | null;
 }) {
   const { siteById, accountForSite, vendorById } = useAppData();
   const { pending, submit, submitFields } = useAction();
@@ -100,28 +107,15 @@ export function WorkOrderDetail({
   const vendor = vendorById(wo.vendorId);
   const risk = slaRisk(wo);
   const countdown = slaCountdown(wo);
-  const phase = phaseForStatus(wo.status);
 
   const awaitingDecision = wo.status === "quote_with_client";
-  const inQuotePhase = phase === "Quote";
   const vendorBlocked = vendor ? vendorComplianceStatus(vendor) === "expired" : false;
-  const gates = {
-    before: (completion?.beforePhotoUrls.length ?? 0) > 0,
-    after: (completion?.afterPhotoUrls.length ?? 0) > 0,
-    signOff: Boolean(completion?.signOffAt),
-    po: Boolean(wo.poNumber),
-  };
   const invoice = invoices[0];
 
   const nextStatus = nextStatusFor(wo.status);
   // New work orders need a vendor before they can be Assigned, so the primary
   // action becomes the dispatch drawer rather than a status button.
   const primaryIsDispatch = wo.status === "new" && !wo.vendorId;
-
-  const repairTotal = wo.nte ?? 0;
-  const repairLines = quoteLineItems(repairTotal);
-  const replaceTotal = Math.round(repairTotal * 2.4);
-  const replaceLines = quoteLineItems(replaceTotal);
 
   return (
     <div className="mx-auto flex max-w-[1500px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
@@ -156,6 +150,7 @@ export function WorkOrderDetail({
             <p className="mt-2 max-w-2xl text-sm text-ink-2">{wo.description}</p>
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <JobKindBadge type={account?.type} />
               <PriorityBadge priority={wo.priority} />
               <StatusBadge status={wo.status} />
               <ExceptionFlag wo={wo} />
@@ -187,6 +182,8 @@ export function WorkOrderDetail({
                 trade={wo.trade}
                 currentVendorId={wo.vendorId}
                 variant="primary"
+                woNumber={wo.woNumber}
+                description={wo.description}
               />
             ) : awaitingDecision ? (
               <Pill tone="warning" dot>
@@ -316,178 +313,34 @@ export function WorkOrderDetail({
             </Tile>
           )}
 
-          <Tile>
-            <SectionHead
-              title="Completion gates"
-              sub="All four must be satisfied before this work order can move to billing"
-              trailing={
-                <Pill tone={gates.signOff && gates.po ? "good" : "warning"}>
-                  {gates.signOff && gates.po ? "Ready for billing" : "Outstanding"}
-                </Pill>
-              }
-            />
-            <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {[
-                { label: "Before photos", done: gates.before },
-                { label: "After photos", done: gates.after },
-                { label: "Manager sign-off", done: gates.signOff },
-                { label: "Purchase order on file", done: gates.po },
-              ].map((gate) => (
-                <li
-                  key={gate.label}
-                  className="flex items-center gap-2.5 rounded-card bg-sunken px-3.5 py-2.5 text-sm"
-                >
-                  {gate.done ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-good" />
-                  ) : (
-                    <Circle className="h-4 w-4 shrink-0 text-ink-3" />
-                  )}
-                  <span className={gate.done ? "" : "text-ink-2"}>{gate.label}</span>
-                </li>
-              ))}
-            </ul>
-            {!gates.signOff && (
-              <form
-                className="mt-4 flex flex-col gap-2 sm:flex-row"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submit(recordSignOff, new FormData(e.currentTarget));
-                }}
-              >
-                <input type="hidden" name="workOrderId" value={wo.id} />
-                <input
-                  name="signOffName"
-                  required
-                  placeholder="Manager name"
-                  className={`${inputClass} sm:flex-1`}
-                />
-                <button type="submit" disabled={pending} className={buttonClass("soft")}>
-                  {pending ? "Saving…" : "Record sign-off"}
-                </button>
-              </form>
-            )}
-            {gates.signOff && (
-              <p className="mt-3 text-xs text-good">
-                Signed off by {completion?.signOffName}{" "}
-                {completion?.signOffAt
-                  ? `· ${formatWhen(completion.signOffAt)}`
-                  : ""}
-              </p>
-            )}
-          </Tile>
+          <DeliveryPanel
+            workOrder={wo}
+            completion={completion}
+            contactEmail={site?.contactEmail ?? null}
+            contactName={site?.contactName ?? null}
+            initialSharePath={deliverySharePath}
+          />
 
-          {inQuotePhase && (
-            <Tile>
-              <SectionHead
-                title="Quote"
-                sub="Two-option quoting for major equipment, per MTC policy"
-              />
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {[
-                  { title: "Option A · Repair", total: repairTotal, lines: repairLines, materialsLabel: "Materials" },
-                  { title: "Option B · Replace", total: replaceTotal, lines: replaceLines, materialsLabel: "Equipment" },
-                ].map((opt) => (
-                  <div key={opt.title} className="rounded-card bg-sunken p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">
-                      {opt.title}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums">
-                      <Money amount={opt.total} />
-                    </p>
-                    <dl className="mt-3 flex flex-col gap-0.5 text-xs text-ink-2">
-                      <div className="flex justify-between">
-                        <dt>Labor</dt>
-                        <dd className="tabular-nums">
-                          <Money amount={opt.lines.labor} />
-                        </dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt>{opt.materialsLabel}</dt>
-                        <dd className="tabular-nums">
-                          <Money amount={opt.lines.materials} />
-                        </dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt>Trip charge</dt>
-                        <dd className="tabular-nums">
-                          <Money amount={opt.lines.tripCharge} />
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-ink-3">
-                Lines always sum to the option total. Sending the quote to the client
-                writes a real estimate record; their decision is stored on it.
-              </p>
-            </Tile>
-          )}
+          <EstimatePanel
+            workOrder={wo}
+            quote={quote}
+            contactEmail={site?.contactEmail ?? null}
+            initialSharePath={estimateSharePath}
+            initialInvoicePath={invoiceSharePath}
+          />
 
-          <Tile>
-            <SectionHead
-              title="Notes"
-              sub="Internal notes stay with the team; client-visible notes are safe to share"
-              trailing={<Pill tone="neutral">{notes.length}</Pill>}
-            />
-
-            <form
-              className="mt-4"
-              onSubmit={(e) => {
-                const form = e.currentTarget;
-                e.preventDefault();
-                submit(addNote, new FormData(form), () => form.reset());
-              }}
-            >
-              <input type="hidden" name="workOrderId" value={wo.id} />
-              <textarea
-                name="body"
-                required
-                rows={2}
-                placeholder="Called the store, tech is 20 minutes out…"
-                className={`${inputClass} resize-y`}
-              />
-              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-                <label className="inline-flex items-center gap-2 text-xs text-ink-2">
-                  <select name="visibility" className={`${inputClass} w-auto py-1.5`} defaultValue="internal">
-                    <option value="internal">Internal only</option>
-                    <option value="client">Client visible</option>
-                  </select>
-                </label>
-                <button type="submit" disabled={pending} className={buttonClass("soft")}>
-                  {pending ? "Saving…" : "Add note"}
-                </button>
-              </div>
-            </form>
-
-            {notes.length === 0 ? (
-              <Empty title="No notes yet" hint="The first note you add will appear here." />
-            ) : (
-              <ul className="mt-4 flex flex-col gap-2">
-                {notes.map((note) => (
-                  <li key={note.id} className="rounded-card bg-sunken p-3.5">
-                    <div className="flex items-center gap-2">
-                      {note.visibility === "client" ? (
-                        <Pill tone="navy">
-                          <Eye className="h-3 w-3" />
-                          Client visible
-                        </Pill>
-                      ) : (
-                        <Pill tone="neutral">
-                          <Lock className="h-3 w-3" />
-                          Internal
-                        </Pill>
-                      )}
-                      <span className="ml-auto text-[11px] text-ink-3">
-                        {note.authorName ?? "Unknown"} · {formatWhen(note.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm whitespace-pre-wrap">{note.body}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Tile>
+          <WorkOrderThread
+            workOrderId={wo.id}
+            notes={notes}
+            siteName={site?.name ?? null}
+            sitePhone={site?.contactPhone ?? null}
+            siteEmail={site?.contactEmail ?? null}
+            vendorName={vendor?.name ?? null}
+            vendorPhone={vendor?.phone ?? null}
+            vendorEmail={vendor?.email ?? null}
+            reporterName={wo.reporterName}
+            reporterPhone={wo.reporterCell}
+          />
 
           <Tile>
             <SectionHead
@@ -537,10 +390,18 @@ export function WorkOrderDetail({
         </div>
 
         <div className="flex flex-col gap-4">
+          <WorkOrderSync
+            workOrderId={wo.id}
+            trackingNumber={wo.externalTrackingNumber}
+            source={wo.source}
+          />
           <Tile>
             <SectionHead title="Site" />
             <p className="mt-3 text-sm font-semibold">{site?.name}</p>
             <p className="text-xs text-ink-3">{account?.name}</p>
+            <div className="mt-2">
+              <JobKindBadge type={account?.type} />
+            </div>
 
             <div className="mt-3 flex items-start gap-2 text-xs text-ink-2">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-3" />
@@ -574,6 +435,8 @@ export function WorkOrderDetail({
                   workOrderId={wo.id}
                   trade={wo.trade}
                   currentVendorId={wo.vendorId}
+                  woNumber={wo.woNumber}
+                  description={wo.description}
                 />
               }
             />

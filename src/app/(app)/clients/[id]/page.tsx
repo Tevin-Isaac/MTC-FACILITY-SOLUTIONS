@@ -33,8 +33,17 @@ export default async function ClientDetailPage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-[-0.02em]">{account.name}</h1>
-            <p className="mt-1 text-sm capitalize text-ink-2">
-              {account.type} · {accountSites.length} sites · {open.length} open work orders
+            <p className="mt-1 text-sm text-ink-2">
+              {account.type === "residential" ? "Residential" : "Corporate"} ·{" "}
+              {accountSites.length}{" "}
+              {account.type === "residential"
+                ? accountSites.length === 1
+                  ? "home"
+                  : "homes"
+                : accountSites.length === 1
+                  ? "site"
+                  : "sites"}{" "}
+              · {open.length} open work orders
             </p>
           </div>
           <div className="text-right">

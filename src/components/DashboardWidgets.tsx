@@ -127,23 +127,73 @@ export function DashboardAttention({
   );
 }
 
+export function DashboardJobMix({
+  commercial,
+  residential,
+}: {
+  commercial: number;
+  residential: number;
+}) {
+  const total = Math.max(1, commercial + residential);
+  return (
+    <Tile>
+      <SectionHead
+        title="Corporate and residential"
+        sub="Same board, both kinds of work"
+      />
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="rounded-card bg-navy-tint px-4 py-4">
+          <p className="text-[11px] font-medium text-navy-ink">Corporate</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{commercial}</p>
+        </div>
+        <div className="rounded-card bg-gold-tint px-4 py-4">
+          <p className="text-[11px] font-medium text-gold-deep">Residential</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{residential}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-tint">
+        <span
+          className="h-full bg-navy transition-all"
+          style={{ width: `${(commercial / total) * 100}%` }}
+        />
+        <span
+          className="h-full bg-gold transition-all"
+          style={{ width: `${(residential / total) * 100}%` }}
+        />
+      </div>
+    </Tile>
+  );
+}
+
 export function DashboardActionQueues({
   unassigned,
   quotes,
   readyToBill,
   onHold,
+  needsQuote = [],
+  mode = "money",
 }: {
   unassigned: WorkOrder[];
   quotes: WorkOrder[];
   readyToBill: WorkOrder[];
   onHold: WorkOrder[];
+  needsQuote?: WorkOrder[];
+  mode?: "ops" | "money";
 }) {
-  const queues = [
-    { title: "Needs vendor", hint: "Intake with nobody dispatched", items: unassigned, tone: "warning" as const },
-    { title: "Quote with client", hint: "Waiting on a yes or no", items: quotes, tone: "navy" as const },
-    { title: "Ready to bill", hint: "Create or send the invoice", items: readyToBill, tone: "good" as const },
-    { title: "On hold", hint: "Exception — resume when ready", items: onHold, tone: "serious" as const },
-  ];
+  const queues =
+    mode === "ops"
+      ? [
+          { title: "Needs dispatch", hint: "Intake with nobody assigned", items: unassigned, tone: "warning" as const },
+          { title: "Needs a quote", hint: "Write and send the estimate", items: needsQuote, tone: "navy" as const },
+          { title: "Quote with client", hint: "Waiting on a yes or no", items: quotes, tone: "gold" as const },
+          { title: "On hold", hint: "Exception — resume when ready", items: onHold, tone: "serious" as const },
+        ]
+      : [
+          { title: "Needs dispatch", hint: "Intake with nobody dispatched", items: unassigned, tone: "warning" as const },
+          { title: "Quote with client", hint: "Waiting on a yes or no", items: quotes, tone: "navy" as const },
+          { title: "Ready to bill", hint: "Create or send the invoice", items: readyToBill, tone: "good" as const },
+          { title: "On hold", hint: "Exception — resume when ready", items: onHold, tone: "serious" as const },
+        ];
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

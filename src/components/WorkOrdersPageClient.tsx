@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Plus, LayoutGrid, List, Search, Download, X, Eye } from "lucide-react";
 import { WorkOrderQuickView } from "@/components/WorkOrderQuickView";
-import { StatusBadge, PriorityBadge, ExceptionFlag } from "@/components/Badge";
+import { StatusBadge, PriorityBadge, ExceptionFlag, JobKindBadge } from "@/components/Badge";
 import { WorkOrderBoard } from "@/components/WorkOrderBoard";
 import { useAppData } from "@/components/AppDataProvider";
 import { slaRisk, slaCountdown, STATUS_LABEL } from "@/lib/domain";
@@ -22,11 +22,12 @@ import {
 } from "@/components/ui";
 
 type SavedView = "all" | "breaching" | "needs_vendor" | "quote_with_client" | "ready_to_bill";
+type JobKindFilter = "all" | "commercial" | "residential";
 
 const SAVED_VIEWS: { key: SavedView; label: string }[] = [
   { key: "all", label: "All" },
   { key: "breaching", label: "Breaching SLA" },
-  { key: "needs_vendor", label: "Needs vendor" },
+  { key: "needs_vendor", label: "Needs dispatch" },
   { key: "quote_with_client", label: "Quote with client" },
   { key: "ready_to_bill", label: "Ready to bill" },
 ];
@@ -55,6 +56,7 @@ export function WorkOrdersPageClient({
   const [savedView, setSavedView] = useState<SavedView>("all");
   const [query, setQuery] = useState("");
   const [trade, setTrade] = useState<Trade | "all">("all");
+  const [jobKind, setJobKind] = useState<JobKindFilter>("all");
   const [peekId, setPeekId] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const siteFilter = searchParams.get("site");
@@ -76,9 +78,10 @@ export function WorkOrdersPageClient({
       if (siteFilter && wo.siteId !== siteFilter) return false;
       if (!matchesView(wo, savedView)) return false;
       if (trade !== "all" && wo.trade !== trade) return false;
+      const account = accountForSite(wo.siteId);
+      if (jobKind !== "all" && account?.type !== jobKind) return false;
       if (!q) return true;
       const site = siteById(wo.siteId);
-      const account = accountForSite(wo.siteId);
       const vendor = vendorById(wo.vendorId);
       // Search covers every number a coordinator might be handed over the
       // phone, not just the WO number.
@@ -96,7 +99,7 @@ export function WorkOrdersPageClient({
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q));
     });
-  }, [all, savedView, trade, query, siteFilter, siteById, accountForSite, vendorById]);
+  }, [all, savedView, trade, jobKind, query, siteFilter, siteById, accountForSite, vendorById]);
 
   function exportCsv() {
     const header = [
@@ -221,6 +224,17 @@ export function WorkOrdersPageClient({
         </div>
 
         <select
+          value={jobKind}
+          onChange={(e) => setJobKind(e.target.value as JobKindFilter)}
+          className={`${inputClass} w-auto bg-surface shadow-soft`}
+          aria-label="Filter by job type"
+        >
+          <option value="all">Corporate & residential</option>
+          <option value="commercial">Corporate only</option>
+          <option value="residential">Residential only</option>
+        </select>
+
+        <select
           value={trade}
           onChange={(e) => setTrade(e.target.value as Trade | "all")}
           className={`${inputClass} w-auto bg-surface capitalize shadow-soft`}
@@ -313,7 +327,10 @@ export function WorkOrdersPageClient({
                       </td>
                       <td className="max-w-[16rem] bg-sunken px-3 py-3 group-hover:bg-tint">
                         <div className="truncate font-medium">{site?.name}</div>
-                        <div className="truncate text-xs text-ink-3">{account?.name}</div>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <JobKindBadge type={account?.type} />
+                          <span className="truncate text-xs text-ink-3">{account?.name}</span>
+                        </div>
                       </td>
                       <td className="bg-sunken px-3 py-3 capitalize text-ink-2 group-hover:bg-tint">
                         {wo.trade.replace(/_/g, " ")}

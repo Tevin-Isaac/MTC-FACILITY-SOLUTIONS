@@ -59,13 +59,6 @@ function hourLabel(iso: string): string {
   });
 }
 
-function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    timeZone: TZ,
-    weekday: "short",
-  });
-}
-
 function hourIsDay(iso: string): boolean {
   const hour = Number(
     new Date(iso).toLocaleString("en-US", {
@@ -81,12 +74,6 @@ function isCurrentHour(iso: string, now: Date): boolean {
   const start = new Date(iso).getTime();
   const t = now.getTime();
   return t >= start && t < start + 60 * 60 * 1000;
-}
-
-function isSameDay(iso: string, now: Date): boolean {
-  const a = new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
-  const b = now.toLocaleDateString("en-CA", { timeZone: TZ });
-  return a === b;
 }
 
 export function DashboardWeather({ weather }: { weather: WeatherSnapshot | null }) {
@@ -138,6 +125,12 @@ export function DashboardWeather({ weather }: { weather: WeatherSnapshot | null 
               <p className="mt-1 text-xs text-white/65">
                 {weatherLabel(weather.current.code, weather.current.isDay)} · feels{" "}
                 {weather.current.feelsF}° · {weather.current.windMph} mph
+                {weather.days[0] && (
+                  <>
+                    {" "}
+                    · {weather.days[0].highF}° / {weather.days[0].lowF}°
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -179,30 +172,6 @@ export function DashboardWeather({ weather }: { weather: WeatherSnapshot | null 
         </ul>
       )}
 
-      {weather && weather.days.length > 0 && (
-        <ul className="mt-3 grid grid-cols-7 gap-1.5">
-          {weather.days.map((day) => {
-            const today = isSameDay(day.date, now);
-            return (
-              <li
-                key={day.date}
-                className={`flex flex-col items-center rounded-control px-1 py-2 text-center ${
-                  today ? "bg-white/14 ring-1 ring-inset ring-white/20" : "bg-white/5"
-                }`}
-              >
-                <span className="text-[10px] font-medium text-white/55">
-                  {today ? "Today" : dayLabel(day.date)}
-                </span>
-                <WeatherIcon code={day.code} isDay className="mt-1 h-3.5 w-3.5 text-white/80" />
-                <span className="mt-1 text-[11px] font-semibold tabular-nums">
-                  {day.highF}°
-                  <span className="font-normal text-white/45"> / {day.lowF}°</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }

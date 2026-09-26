@@ -1,9 +1,13 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/auth";
 import { getAppData, getInvoices } from "@/lib/data/queries";
+import { makeShareToken } from "@/lib/share-token";
 import { Tile, SectionHead, Pill, Money, Empty } from "@/components/ui";
 import { StatusBadge } from "@/components/Badge";
+import { BillingSendButton } from "@/components/BillingSendButton";
 
 export default async function BillingPage() {
+  await requireAdmin();
   const [{ workOrders, sites }, invoices] = await Promise.all([getAppData(), getInvoices()]);
   const ready = workOrders.filter((wo) =>
     ["ready_to_bill", "ready_to_invoice"].includes(wo.status)
@@ -48,7 +52,7 @@ export default async function BillingPage() {
       </div>
 
       <Tile>
-        <SectionHead title="Ready to bill" sub="Advance the work order to create or send the invoice" />
+        <SectionHead title="Ready to bill" sub="Send the invoice to the client from here, or open the work order" />
         {ready.length === 0 ? (
           <Empty title="Nothing waiting to bill" />
         ) : (
@@ -56,18 +60,19 @@ export default async function BillingPage() {
             {ready.map((wo) => {
               const site = sites.find((s) => s.id === wo.siteId);
               return (
-                <li key={wo.id}>
-                  <Link
-                    href={`/work-orders/${wo.id}`}
-                    className="flex flex-wrap items-center gap-3 rounded-card bg-sunken px-4 py-3 hover:bg-tint"
-                  >
+                <li
+                  key={wo.id}
+                  className="flex flex-wrap items-center gap-3 rounded-card bg-sunken px-4 py-3"
+                >
+                  <Link href={`/work-orders/${wo.id}`} className="min-w-0 flex-1 hover:underline">
                     <span className="font-semibold tabular-nums">{wo.woNumber}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-ink-2">{site?.name}</span>
-                    <StatusBadge status={wo.status} />
-                    <span className="font-semibold tabular-nums">
-                      <Money amount={wo.dne ?? wo.nte} />
-                    </span>
+                    <span className="ml-3 text-sm text-ink-2">{site?.name}</span>
                   </Link>
+                  <StatusBadge status={wo.status} />
+                  <span className="font-semibold tabular-nums">
+                    <Money amount={wo.dne ?? wo.nte} />
+                  </span>
+                  <BillingSendButton workOrderId={wo.id} amount={wo.dne ?? wo.nte ?? 0} />
                 </li>
               );
             })}
@@ -92,6 +97,7 @@ export default async function BillingPage() {
                   <th className="pb-2 font-medium">Status</th>
                   <th className="pb-2 text-right font-medium">Amount</th>
                   <th className="pb-2 font-medium">Due</th>
+                  <th className="pb-2 font-medium">Client</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,6 +122,23 @@ export default async function BillingPage() {
                     </td>
                     <td className="py-3 text-ink-2">
                       {invoice.dueAt ? new Date(invoice.dueAt).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="py-3">
+                      {invoice.status === "draft" ? (
+                        <BillingSendButton
+                          workOrderId={invoice.workOrderId}
+                          amount={invoice.amount}
+                        />
+                      ) : (
+                        <a
+                          href={`/i/${makeShareToken("i", invoice.workOrderId)}`}
+                          className="text-navy-ink hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Client view
+                        </a>
+                      )}
                     </td>
                   </tr>
                 ))}

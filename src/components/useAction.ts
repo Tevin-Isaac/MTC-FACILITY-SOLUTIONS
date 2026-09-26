@@ -15,12 +15,16 @@ type Action = (formData: FormData) => Promise<ActionResult>;
 export function useAction() {
   const [pending, startTransition] = useTransition();
 
-  function submit(action: Action, formData: FormData, onSuccess?: () => void) {
+  function submit(
+    action: Action,
+    formData: FormData,
+    onSuccess?: (result: Extract<ActionResult, { ok: true }>) => void
+  ) {
     startTransition(async () => {
       const result = await action(formData);
       if (result.ok) {
         toast.success(result.message);
-        onSuccess?.();
+        onSuccess?.(result);
       } else {
         toast.error(result.error);
       }
@@ -31,7 +35,7 @@ export function useAction() {
   function submitFields(
     action: Action,
     fields: Record<string, string>,
-    onSuccess?: () => void
+    onSuccess?: (result: Extract<ActionResult, { ok: true }>) => void
   ) {
     const formData = new FormData();
     for (const [key, value] of Object.entries(fields)) {

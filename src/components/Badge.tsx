@@ -1,4 +1,4 @@
-import type { Priority, WorkOrder, WorkOrderStatus } from "@/types/work-order";
+import type { ClientType, Priority, WorkOrder, WorkOrderStatus } from "@/types/work-order";
 import {
   STATUS_LABEL,
   phaseForStatus,
@@ -57,6 +57,15 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
   return (
     <Pill tone={tone} solid={solid}>
       {label}
+    </Pill>
+  );
+}
+
+export function JobKindBadge({ type }: { type?: ClientType }) {
+  if (!type) return null;
+  return (
+    <Pill tone={type === "residential" ? "gold" : "navy"}>
+      {type === "residential" ? "Residential" : "Corporate"}
     </Pill>
   );
 }

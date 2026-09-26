@@ -5,7 +5,7 @@ import { ArrowUpRight, Clock, MapPin, Wrench } from "lucide-react";
 import type { WorkOrder } from "@/types/work-order";
 import { nextStepLabel, slaCountdown, slaRisk } from "@/lib/domain";
 import { useAppData } from "@/components/AppDataProvider";
-import { PriorityBadge, StatusBadge, ExceptionFlag } from "@/components/Badge";
+import { PriorityBadge, StatusBadge, ExceptionFlag, JobKindBadge } from "@/components/Badge";
 import { PhaseProgressBar } from "@/components/PhaseProgressBar";
 import { Drawer, DrawerItem } from "@/components/Drawer";
 import { Field, Money, Pill, buttonClass } from "@/components/ui";
@@ -51,6 +51,7 @@ export function WorkOrderQuickView({
         <div className="flex flex-col gap-3 px-2">
           <DrawerItem index={0}>
             <div className="flex flex-wrap items-center gap-1.5">
+              <JobKindBadge type={account?.type} />
               <StatusBadge status={workOrder.status} />
               <PriorityBadge priority={workOrder.priority} />
               <ExceptionFlag wo={workOrder} />

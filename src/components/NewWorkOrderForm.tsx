@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check } from "lucide-react";
-import type { Account, Site } from "@/types/work-order";
+import { ArrowLeft, Check, Building2, Home } from "lucide-react";
+import type { Account, ClientType, Site } from "@/types/work-order";
 import { createWorkOrder } from "@/lib/actions/work-orders";
 import { useAction } from "@/components/useAction";
 import {
@@ -35,13 +36,6 @@ const PRIORITIES = [
   { value: "routine_scheduled", label: "Routine · scheduled" },
 ] as const;
 
-const SOURCES = [
-  { value: "service_channel", label: "ServiceChannel" },
-  { value: "outlook_email", label: "Email (Outlook)" },
-  { value: "phone", label: "Phone call" },
-  { value: "manual", label: "Entered manually" },
-] as const;
-
 export function NewWorkOrderForm({
   accounts,
   sites,
@@ -51,19 +45,27 @@ export function NewWorkOrderForm({
 }) {
   const router = useRouter();
   const { pending, submit } = useAction();
+  const [jobKind, setJobKind] = useState<ClientType>("commercial");
+  const [newHome, setNewHome] = useState(false);
 
-  // Sites are grouped by parent account, which is how coordinators think
-  // about them — ~1,800 child sites under a handful of accounts.
-  const grouped = accounts
-    .map((account) => ({
-      account,
-      sites: sites.filter((s) => s.accountId === account.id),
-    }))
-    .filter((g) => g.sites.length > 0);
+  const grouped = useMemo(
+    () =>
+      accounts
+        .filter((account) => account.type === jobKind)
+        .map((account) => ({
+          account,
+          sites: sites.filter((s) => s.accountId === account.id),
+        }))
+        .filter((g) => g.sites.length > 0),
+    [accounts, sites, jobKind]
+  );
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    submit(createWorkOrder, new FormData(event.currentTarget), () => {
+    const form = new FormData(event.currentTarget);
+    form.set("jobKind", jobKind);
+    form.set("newHome", jobKind === "residential" && newHome ? "yes" : "no");
+    submit(createWorkOrder, form, () => {
       router.push("/work-orders");
     });
   }
@@ -80,33 +82,122 @@ export function NewWorkOrderForm({
         </Link>
         <h1 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">New work order</h1>
         <p className="mt-1 text-sm text-ink-2">
-          The SLA clock starts as soon as this is saved, based on the priority you pick.
+          Corporate stores and residential homes use the same board. Pick the job type first.
         </p>
       </div>
 
       <form onSubmit={onSubmit}>
         <Tile>
+          <SectionHead title="Job type" sub="Residential homes sit next to corporate sites — same dispatch, different intake." />
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <KindButton
+              active={jobKind === "commercial"}
+              icon={Building2}
+              title="Corporate"
+              hint="Stores, portfolios, ServiceChannel"
+              onClick={() => {
+                setJobKind("commercial");
+                setNewHome(false);
+              }}
+            />
+            <KindButton
+              active={jobKind === "residential"}
+              icon={Home}
+              title="Residential"
+              hint="Homeowners, single addresses"
+              onClick={() => setJobKind("residential")}
+            />
+          </div>
+          <input type="hidden" name="jobKind" value={jobKind} />
+          <input type="hidden" name="newHome" value={jobKind === "residential" && newHome ? "yes" : "no"} />
+        </Tile>
+
+        <Tile className="mt-4">
           <SectionHead title="Where and what" />
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <FormField label="Site" htmlFor="siteId">
-                <select id="siteId" name="siteId" required className={inputClass} defaultValue="">
-                  <option value="" disabled>
-                    Choose a site…
-                  </option>
-                  {grouped.map(({ account, sites: accountSites }) => (
-                    <optgroup key={account.id} label={account.name}>
-                      {accountSites.map((site) => (
-                        <option key={site.id} value={site.id}>
-                          {site.storeCode ? `${site.storeCode} — ` : ""}
-                          {site.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </FormField>
-            </div>
+            {jobKind === "residential" && (
+              <div className="sm:col-span-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setNewHome(false)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                    !newHome ? "bg-navy text-white" : "bg-tint text-ink-2"
+                  }`}
+                >
+                  Existing home
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewHome(true)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                    newHome ? "bg-navy text-white" : "bg-tint text-ink-2"
+                  }`}
+                >
+                  New homeowner
+                </button>
+              </div>
+            )}
+
+            {jobKind === "residential" && newHome ? (
+              <>
+                <FormField label="Homeowner" htmlFor="homeownerName">
+                  <input
+                    id="homeownerName"
+                    name="homeownerName"
+                    required
+                    placeholder="Jordan Hale"
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="Phone" htmlFor="homePhone">
+                  <input id="homePhone" name="homePhone" placeholder="214-555-0144" className={inputClass} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Home address" htmlFor="homeAddress">
+                    <input
+                      id="homeAddress"
+                      name="homeAddress"
+                      required
+                      placeholder="412 Elm Street, Little Elm, TX"
+                      className={inputClass}
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Email" htmlFor="homeEmail">
+                  <input id="homeEmail" name="homeEmail" type="email" placeholder="home@email.com" className={inputClass} />
+                </FormField>
+              </>
+            ) : (
+              <div className="sm:col-span-2">
+                <FormField
+                  label={jobKind === "residential" ? "Home" : "Site"}
+                  htmlFor="siteId"
+                  hint={
+                    grouped.length === 0
+                      ? jobKind === "residential"
+                        ? "No homes on file yet — switch to New homeowner."
+                        : "No corporate sites on file yet."
+                      : undefined
+                  }
+                >
+                  <select id="siteId" name="siteId" required={!newHome} className={inputClass} defaultValue="">
+                    <option value="" disabled>
+                      {jobKind === "residential" ? "Choose a home…" : "Choose a site…"}
+                    </option>
+                    {grouped.map(({ account, sites: accountSites }) => (
+                      <optgroup key={account.id} label={account.name}>
+                        {accountSites.map((site) => (
+                          <option key={site.id} value={site.id}>
+                            {site.storeCode ? `${site.storeCode} — ` : ""}
+                            {site.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+            )}
 
             <FormField label="Trade" htmlFor="trade">
               <select id="trade" name="trade" required className={`${inputClass} capitalize`} defaultValue="">
@@ -141,14 +232,22 @@ export function NewWorkOrderForm({
               <FormField
                 label="Description"
                 htmlFor="description"
-                hint="What the store reported. Keep the vendor-facing scope in here."
+                hint={
+                  jobKind === "residential"
+                    ? "What the homeowner reported."
+                    : "What the store reported. Keep the vendor-facing scope in here."
+                }
               >
                 <textarea
                   id="description"
                   name="description"
                   required
                   rows={3}
-                  placeholder="RTU not cooling, high indoor temp on the sales floor"
+                  placeholder={
+                    jobKind === "residential"
+                      ? "AC not cooling upstairs, thermostat blank"
+                      : "RTU not cooling, high indoor temp on the sales floor"
+                  }
                   className={`${inputClass} resize-y`}
                 />
               </FormField>
@@ -179,29 +278,34 @@ export function NewWorkOrderForm({
               />
             </FormField>
 
-            <FormField label="Client PO number" htmlFor="poNumber">
-              <input id="poNumber" name="poNumber" placeholder="PO-55320" className={inputClass} />
+            <FormField label={jobKind === "residential" ? "Homeowner PO / reference" : "Client PO number"} htmlFor="poNumber">
+              <input id="poNumber" name="poNumber" placeholder={jobKind === "residential" ? "Optional" : "PO-55320"} className={inputClass} />
             </FormField>
 
             <FormField label="How it came in" htmlFor="source">
-              <select id="source" name="source" className={inputClass} defaultValue="service_channel">
-                {SOURCES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
+              <select
+                id="source"
+                name="source"
+                className={inputClass}
+                defaultValue={jobKind === "residential" ? "phone" : "service_channel"}
+                key={jobKind}
+              >
+                {jobKind === "commercial" && <option value="service_channel">ServiceChannel</option>}
+                <option value="outlook_email">Email (Outlook)</option>
+                <option value="phone">Phone call</option>
+                <option value="manual">Entered manually</option>
               </select>
             </FormField>
 
             <FormField
-              label="Reported by"
+              label={jobKind === "residential" ? "Homeowner contact" : "Reported by"}
               htmlFor="reporterName"
-              hint="Store contact. Never shown to vendors."
+              hint="Never shown to vendors."
             >
               <input id="reporterName" name="reporterName" placeholder="Alex Rivera" className={inputClass} />
             </FormField>
 
-            <FormField label="Reporter phone" htmlFor="reporterCell">
+            <FormField label="Contact phone" htmlFor="reporterCell">
               <input id="reporterCell" name="reporterCell" placeholder="214-555-0199" className={inputClass} />
             </FormField>
           </div>
@@ -218,5 +322,35 @@ export function NewWorkOrderForm({
         </div>
       </form>
     </div>
+  );
+}
+
+function KindButton({
+  active,
+  icon: Icon,
+  title,
+  hint,
+  onClick,
+}: {
+  active: boolean;
+  icon: typeof Home;
+  title: string;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-card px-4 py-4 text-left transition-all ${
+        active
+          ? "bg-navy text-white shadow-soft"
+          : "bg-sunken text-ink hover:bg-tint"
+      }`}
+    >
+      <Icon className={`h-5 w-5 ${active ? "text-gold" : "text-ink-3"}`} />
+      <p className="mt-2 text-sm font-semibold">{title}</p>
+      <p className={`mt-0.5 text-xs ${active ? "text-white/70" : "text-ink-3"}`}>{hint}</p>
+    </button>
   );
 }

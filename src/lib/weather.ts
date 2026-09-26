@@ -20,6 +20,10 @@ function kmhToMph(kmh: number): number {
   return Math.round(kmh * 0.621371);
 }
 
+function chicagoDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-CA", { timeZone: WEATHER_PLACE.timezone });
+}
+
 interface OpenMeteoResponse {
   timezone?: string;
   current?: {
@@ -50,7 +54,7 @@ export async function getLittleElmWeather(): Promise<WeatherSnapshot | null> {
   url.searchParams.set("latitude", String(WEATHER_PLACE.latitude));
   url.searchParams.set("longitude", String(WEATHER_PLACE.longitude));
   url.searchParams.set("timezone", WEATHER_PLACE.timezone);
-  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("forecast_days", "1");
   url.searchParams.set(
     "current",
     "temperature_2m,apparent_temperature,weather_code,relative_humidity_2m,wind_speed_10m,is_day"
@@ -69,12 +73,14 @@ export async function getLittleElmWeather(): Promise<WeatherSnapshot | null> {
     const current = data.current;
     const hourly = data.hourly;
     const daily = data.daily;
-    if (!current || !hourly || !daily) return null;
+    if (!current || !hourly || !daily || daily.time.length === 0) return null;
 
     const now = Date.now();
+    const today = chicagoDate(now);
     const hours: WeatherHour[] = [];
     for (let i = 0; i < hourly.time.length; i++) {
       const stamp = hourly.time[i] * 1000;
+      if (chicagoDate(stamp) !== today) continue;
       if (stamp < now - 60 * 60 * 1000) continue;
       hours.push({
         time: new Date(stamp).toISOString(),
@@ -82,16 +88,19 @@ export async function getLittleElmWeather(): Promise<WeatherSnapshot | null> {
         code: hourly.weather_code[i],
         precipChance: hourly.precipitation_probability[i] ?? 0,
       });
-      if (hours.length >= 16) break;
     }
 
-    const days: WeatherDay[] = daily.time.map((date, i) => ({
-      date: new Date(date * 1000).toISOString(),
-      code: daily.weather_code[i],
-      highF: cToF(daily.temperature_2m_max[i]),
-      lowF: cToF(daily.temperature_2m_min[i]),
-      precipChance: daily.precipitation_probability_max[i] ?? 0,
-    }));
+    const todayIndex = daily.time.findIndex((date) => chicagoDate(date * 1000) === today);
+    const dayAt = todayIndex >= 0 ? todayIndex : 0;
+    const days: WeatherDay[] = [
+      {
+        date: new Date(daily.time[dayAt] * 1000).toISOString(),
+        code: daily.weather_code[dayAt],
+        highF: cToF(daily.temperature_2m_max[dayAt]),
+        lowF: cToF(daily.temperature_2m_min[dayAt]),
+        precipChance: daily.precipitation_probability_max[dayAt] ?? 0,
+      },
+    ];
 
     return {
       fetchedAt: new Date().toISOString(),

@@ -9,6 +9,12 @@ import type {
   Vendor,
   WorkOrder,
 } from "@/types/work-order";
+import type { QuoteLine, WorkOrderQuote } from "@/lib/quote";
+import { parseThread, type ThreadItem } from "@/lib/thread";
+
+export type { QuoteLine, WorkOrderQuote } from "@/lib/quote";
+export { lineAmount, quoteTotals } from "@/lib/quote";
+export type { ThreadItem } from "@/lib/thread";
 
 // Maps snake_case Postgres rows to the camelCase domain types in
 // src/types/work-order.ts. Keeping the mapping in one place means the rest
@@ -142,13 +148,7 @@ export interface WorkOrderEvent {
   createdAt: string;
 }
 
-export interface WorkOrderNote {
-  id: string;
-  body: string;
-  visibility: "internal" | "client";
-  authorName: string | null;
-  createdAt: string;
-}
+export type WorkOrderNote = ThreadItem;
 
 /** Real activity history, newest first. Replaces the timeline the first
     version synthesised in the component. */
@@ -199,6 +199,11 @@ export async function getWorkOrderNotes(workOrderId: string): Promise<WorkOrderN
       visibility: row.visibility as WorkOrderNote["visibility"],
       authorName: (row.author_name as string) ?? null,
       createdAt: row.created_at as string,
+      channel: "note" as const,
+      audience: (row.visibility === "client" ? "client" : "internal") as ThreadItem["audience"],
+      contactName: null,
+      contactValue: null,
+      outcome: null,
     }));
   }
   if (!tableMissing(error)) throw new Error(`getWorkOrderNotes: ${error.message}`);
@@ -206,22 +211,7 @@ export async function getWorkOrderNotes(workOrderId: string): Promise<WorkOrderN
 }
 
 export function parseFallbackNotes(raw: string | null): WorkOrderNote[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as { notes?: WorkOrderNote[] };
-    if (Array.isArray(parsed.notes)) return parsed.notes;
-  } catch {
-    return [
-      {
-        id: "legacy",
-        body: raw,
-        visibility: "internal",
-        authorName: null,
-        createdAt: new Date(0).toISOString(),
-      },
-    ];
-  }
-  return [];
+  return parseThread(raw);
 }
 
 async function readFallbackNotes(workOrderId: string): Promise<WorkOrderNote[]> {
@@ -355,4 +345,41 @@ export async function getAppData() {
     getWorkOrders(),
   ]);
   return { accounts, sites, vendors, workOrders };
+}
+
+function mapQuoteLine(row: Record<string, unknown>): QuoteLine {
+  return {
+    id: row.id as string,
+    side: row.side as QuoteLine["side"],
+    description: row.description as string,
+    kind: row.kind as QuoteLine["kind"],
+    laborHours: row.labor_hours != null ? Number(row.labor_hours) : null,
+    laborRate: row.labor_rate != null ? Number(row.labor_rate) : null,
+    materialsCost: row.materials_cost != null ? Number(row.materials_cost) : null,
+    markupPercent: row.markup_percent != null ? Number(row.markup_percent) : null,
+  };
+}
+
+export async function getQuoteForWorkOrder(workOrderId: string): Promise<WorkOrderQuote | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("*, quote_line_items(*)")
+    .eq("work_order_id", workOrderId)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    if (tableMissing(error)) return null;
+    throw new Error(`getQuoteForWorkOrder: ${error.message}`);
+  }
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    workOrderId: data.work_order_id as string,
+    optionType: data.option_type as WorkOrderQuote["optionType"],
+    status: data.status as WorkOrderQuote["status"],
+    approvedBy: (data.approved_by as string) ?? null,
+    approvedAt: (data.approved_at as string) ?? null,
+    lines: ((data.quote_line_items as Record<string, unknown>[]) ?? []).map(mapQuoteLine),
+  };
 }

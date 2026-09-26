@@ -232,7 +232,7 @@ export function vendorsForTrade(vendors: Vendor[], trade: WorkOrder["trade"]): V
 // Next-step button label, context-aware per the WO's current status.
 export function nextStepLabel(status: WorkOrderStatus): string {
   const map: Partial<Record<WorkOrderStatus, string>> = {
-    new: "Assign vendor",
+    new: "Dispatch vendor",
     assigned: "Confirm schedule",
     schedule_confirmed: "Mark tech onsite",
     tech_onsite: "Mark work completed",

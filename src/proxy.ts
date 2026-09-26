@@ -2,7 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseIsConfigured } from "@/lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth",
+  "/reset-password",
+  "/e",
+  "/i",
+  "/d",
+  "/api/integrations/service-channel",
+  "/api/integrations/outlook/webhook",
+];
 
 export async function proxy(request: NextRequest) {
   // Until a Supabase project is connected, let everything through

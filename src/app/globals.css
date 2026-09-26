@@ -11,10 +11,10 @@
 --------------------------------------------------------------------------- */
 
 :root {
-  --canvas: #f4f5f8;
+  --canvas: #f3f5f9;
   --surface: #ffffff;
-  --surface-sunken: #f8f9fb;
-  --surface-tint: #f1f3f9;
+  --surface-sunken: #f7f8fc;
+  --surface-tint: #eef1f8;
   --hairline: rgba(15, 23, 42, 0.07);
   --hairline-strong: rgba(15, 23, 42, 0.12);
 

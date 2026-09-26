@@ -21,15 +21,21 @@ export interface HeroStat {
  * in real time.
  */
 export function DashboardHero({
+  eyebrow,
   greeting,
   summary,
   stats,
   weather,
+  primary = { href: "/work-orders", label: "Open the board" },
+  secondary = { href: "/work-orders/new", label: "New work order" },
 }: {
+  eyebrow?: string;
   greeting: string;
   summary: string;
   stats: HeroStat[];
   weather: WeatherSnapshot | null;
+  primary?: { href: string; label: string };
+  secondary?: { href: string; label: string };
 }) {
   const reduce = useReducedMotion();
   const [spot, setSpot] = useState({ x: 78, y: 22 });
@@ -90,6 +96,11 @@ export function DashboardHero({
 
       <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
         <div className="max-w-lg">
+          {eyebrow && (
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+              {eyebrow}
+            </p>
+          )}
           <motion.h1
             initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -114,18 +125,18 @@ export function DashboardHero({
             className="mt-7 flex flex-wrap items-center gap-2.5"
           >
             <Link
-              href="/work-orders"
+              href={primary.href}
               className="group inline-flex items-center gap-2 rounded-full bg-gold px-5 py-3 text-sm font-semibold text-navy-deep shadow-[0_10px_30px_-12px_rgba(238,193,74,0.8)] transition-transform hover:scale-[1.03] hover:bg-white"
             >
-              Open the board
+              {primary.label}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href="/work-orders/new"
+              href={secondary.href}
               className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm transition-colors hover:bg-white/20"
             >
-              <Plus className="h-4 w-4" />
-              New work order
+              {secondary.href.endsWith("/new") && <Plus className="h-4 w-4" />}
+              {secondary.label}
             </Link>
           </motion.div>
         </div>
@@ -163,7 +174,7 @@ export function DashboardHero({
         )}
       </div>
 
-      <DashboardWeather weather={weather} />
+      {weather && <DashboardWeather weather={weather} />}
     </section>
   );
 }

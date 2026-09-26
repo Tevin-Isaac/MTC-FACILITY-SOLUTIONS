@@ -11,6 +11,8 @@ import {
   Building2,
   Wrench,
   ReceiptText,
+  Inbox,
+  Shield,
   Menu,
   X,
 } from "lucide-react";
@@ -19,6 +21,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
+import type { PublicSession } from "@/lib/roles";
 
 type NavItem = {
   href: string;
@@ -26,13 +29,22 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
-const NAV_ITEMS: NavItem[] = [
+const FLOOR_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/work-orders", label: "Work Orders", icon: ClipboardList },
   { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/vendors", label: "Vendors", icon: Wrench },
+  { href: "/intake", label: "Intake", icon: Inbox },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { href: "/admin", label: "Admin", icon: Shield },
   { href: "/billing", label: "Billing", icon: ReceiptText },
 ];
+
+function navFor(isAdmin: boolean): NavItem[] {
+  return isAdmin ? [...FLOOR_NAV, ...ADMIN_NAV] : FLOOR_NAV;
+}
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -58,7 +70,7 @@ function BrandMark({ size = 36 }: { size?: number }) {
 
 /** Slim icon rail. Labels appear on hover so the rail stays narrow without
     becoming a guessing game. */
-function Rail({ pathname }: { pathname: string }) {
+function Rail({ pathname, items }: { pathname: string; items: NavItem[] }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center gap-1 border-r border-hairline bg-surface py-4 md:flex">
       <Link href="/dashboard" className="mb-3" aria-label="MTC Dashboard">
@@ -66,7 +78,7 @@ function Rail({ pathname }: { pathname: string }) {
       </Link>
 
       <nav className="flex flex-col items-center gap-1.5">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
             <Link
@@ -104,9 +116,11 @@ function Rail({ pathname }: { pathname: string }) {
 
 function MobileDrawer({
   pathname,
+  items,
   onClose,
 }: {
   pathname: string;
+  items: NavItem[];
   onClose: () => void;
 }) {
   return (
@@ -150,7 +164,7 @@ function MobileDrawer({
         </div>
 
         <nav className="mt-6 flex flex-col gap-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
               <Link
@@ -168,15 +182,25 @@ function MobileDrawer({
           })}
         </nav>
 
-        <p className="mt-auto text-[11px] text-ink-3">MTC Facility Solutions LLC</p>
+        <div className="mt-auto space-y-3">
+          <ThemeToggle />
+          <p className="text-[11px] text-ink-3">MTC Facility Solutions LLC</p>
+        </div>
       </motion.aside>
     </motion.div>
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session: PublicSession | null;
+}) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const items = navFor(session?.isAdmin ?? true);
 
   return (
     <div className="relative flex min-h-dvh w-full bg-canvas">
@@ -185,16 +209,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="absolute right-0 top-0 h-80 w-80 rounded-full bg-gold/10 blur-3xl" />
         <span className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-navy/5 blur-3xl" />
       </div>
-      <Rail pathname={pathname} />
+      <Rail pathname={pathname} items={items} />
 
       <AnimatePresence>
         {mobileNavOpen && (
-          <MobileDrawer pathname={pathname} onClose={() => setMobileNavOpen(false)} />
+          <MobileDrawer
+            pathname={pathname}
+            items={items}
+            onClose={() => setMobileNavOpen(false)}
+          />
         )}
       </AnimatePresence>
 
       <div className="app-frame relative flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-hairline bg-canvas/70 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-hairline bg-canvas/75 px-4 py-3 backdrop-blur-xl sm:gap-4 sm:px-6">
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
@@ -207,14 +235,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             <BrandMark size={30} />
           </div>
 
-          <div className="hidden min-w-0 flex-1 md:block">
+          <div className="flex min-w-0 flex-1 items-center">
             <CommandPalette />
           </div>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <ThemeToggle />
             <NotificationBell />
-            <UserMenu />
+            <UserMenu session={session} />
           </div>
         </header>
 

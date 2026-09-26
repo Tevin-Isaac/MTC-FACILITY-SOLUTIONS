@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { buttonClass, inputClass, labelClass } from "@/components/ui";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -67,72 +68,82 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-brand-navy px-6">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white p-3 shadow-lg">
-        <Image
-          src="/mtc-logo.png"
-          alt="MTC Facility Solutions"
-          width={72}
-          height={72}
-          className="h-full w-full object-contain"
-          priority
-        />
-      </div>
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-navy-deep px-5 py-12">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-1/4 h-80 w-80 rounded-full bg-gold/10 blur-3xl"
+      />
 
-      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-raised p-6 shadow-2xl">
-        <h1 className="text-lg font-semibold text-foreground">Set a new password</h1>
-        <p className="mt-1 text-sm text-muted">MTC Work Order Platform</p>
+      <div className="relative w-full max-w-sm">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-card bg-white p-2.5 shadow-lift">
+            <Image
+              src="/mtc-logo.png"
+              alt="MTC Facility Solutions"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+              priority
+            />
+          </span>
+          <div>
+            <h1 className="text-xl font-semibold text-white">Set a new password</h1>
+            <p className="mt-1 text-sm text-white/60">MTC Work Order Platform</p>
+          </div>
+        </div>
 
-        {!ready ? (
-          <p className="mt-6 text-sm text-muted">
-            Verifying your reset link…
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-            <div>
-              <label htmlFor="password" className="text-xs font-medium text-muted">
-                New password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm" className="text-xs font-medium text-muted">
-                Confirm password
-              </label>
-              <input
-                id="confirm"
-                type="password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold"
-                placeholder="••••••••"
-              />
-            </div>
+        <div className="mt-7 rounded-tile bg-surface p-6 shadow-lift">
+          {!ready ? (
+            <p className="text-sm text-ink-2">Verifying your reset link…</p>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="password" className={labelClass}>
+                  New password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirm" className={labelClass}>
+                  Confirm password
+                </label>
+                <input
+                  id="confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  className={inputClass}
+                  placeholder="••••••••"
+                />
+              </div>
 
-            {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-status-critical">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p className="rounded-control bg-critical-tint px-3 py-2.5 text-xs text-critical">
+                  {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-navy-dark disabled:opacity-50"
-            >
-              {loading ? "Updating…" : "Update password"}
-            </button>
-          </form>
-        )}
+              <button
+                type="submit"
+                disabled={loading}
+                className={buttonClass("primary", "mt-1 w-full")}
+              >
+                {loading ? "Updating…" : "Update password"}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </main>
   );

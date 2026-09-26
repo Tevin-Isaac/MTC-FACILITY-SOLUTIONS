@@ -57,6 +57,17 @@ export const PHASE_COLOR: Record<PhaseFamily, string> = {
   Closed: "var(--phase-closed)",
 };
 
+// Matching soft background for each family, so chips and board columns read
+// as tinted rather than outlined.
+export const PHASE_TINT: Record<PhaseFamily, string> = {
+  Intake: "var(--phase-intake-tint)",
+  Dispatch: "var(--phase-dispatch-tint)",
+  Quote: "var(--phase-quote-tint)",
+  Completion: "var(--phase-completion-tint)",
+  Billing: "var(--phase-billing-tint)",
+  Closed: "var(--phase-closed-tint)",
+};
+
 const PHASE_BY_STATUS: Record<WorkOrderStatus, PhaseFamily> = {
   new: "Intake",
   assigned: "Dispatch",
@@ -225,16 +236,103 @@ export function nextStepLabel(status: WorkOrderStatus): string {
     assigned: "Confirm schedule",
     schedule_confirmed: "Mark tech onsite",
     tech_onsite: "Mark work completed",
-    pending_quote: "Build quote",
+    pending_quote: "Send quote to client",
     quote_with_client: "Record client decision",
     quote_approved: "Schedule repair",
+    quote_declined: "Close, no charge",
     work_completed: "Upload documentation",
     pending_documentation: "Submit for QA",
     in_quality_assurance: "Approve for billing",
     ready_to_bill: "Create invoice",
     ready_to_invoice: "Send invoice",
     invoiced: "Record payment",
+    paid: "Close work order",
     on_hold: "Resume work order",
   };
   return map[status] ?? "Update status";
+}
+
+/**
+ * The single status the primary next-step button moves to. `null` means the
+ * work order is terminal, or the step needs more input than one click (a
+ * client decision, which goes through `recordQuoteDecision` instead).
+ */
+const NEXT_STATUS: Partial<Record<WorkOrderStatus, WorkOrderStatus>> = {
+  new: "assigned",
+  assigned: "schedule_confirmed",
+  schedule_confirmed: "tech_onsite",
+  tech_onsite: "work_completed",
+  pending_quote: "quote_with_client",
+  quote_approved: "schedule_confirmed",
+  quote_declined: "complete_no_charge",
+  work_completed: "pending_documentation",
+  pending_documentation: "in_quality_assurance",
+  in_quality_assurance: "ready_to_bill",
+  ready_to_bill: "ready_to_invoice",
+  ready_to_invoice: "invoiced",
+  invoiced: "paid",
+  paid: "closed",
+  on_hold: "assigned",
+};
+
+export function nextStatusFor(status: WorkOrderStatus): WorkOrderStatus | null {
+  return NEXT_STATUS[status] ?? null;
+}
+
+/**
+ * Lifecycle graph. Movement is deliberately restricted — a work order can't
+ * jump from New straight to Invoiced — so the pipeline keeps meaning. On hold
+ * and Cancelled are reachable from any live stage, which is how exceptions
+ * actually happen.
+ */
+const ESCAPE_HATCHES: WorkOrderStatus[] = ["on_hold", "cancelled"];
+
+const TRANSITIONS: Record<WorkOrderStatus, WorkOrderStatus[]> = {
+  new: ["assigned", "pending_quote"],
+  assigned: ["schedule_confirmed", "tech_onsite", "pending_quote"],
+  schedule_confirmed: ["tech_onsite", "pending_quote"],
+  tech_onsite: ["work_completed", "pending_quote"],
+  pending_quote: ["quote_with_client"],
+  quote_with_client: ["quote_approved", "quote_declined"],
+  quote_approved: ["schedule_confirmed", "tech_onsite"],
+  quote_declined: ["complete_no_charge", "closed"],
+  work_completed: ["pending_documentation", "in_quality_assurance"],
+  pending_documentation: ["in_quality_assurance"],
+  in_quality_assurance: ["ready_to_bill", "work_completed"],
+  ready_to_bill: ["ready_to_invoice"],
+  ready_to_invoice: ["invoiced"],
+  invoiced: ["paid"],
+  paid: ["closed"],
+  on_hold: ["assigned", "schedule_confirmed", "tech_onsite", "pending_quote"],
+  // Terminal.
+  closed: [],
+  complete_no_charge: [],
+  cancelled: [],
+};
+
+export function allowedTransitions(from: WorkOrderStatus): WorkOrderStatus[] {
+  const base = TRANSITIONS[from];
+  if (base.length === 0) return [];
+  return [...base, ...ESCAPE_HATCHES.filter((s) => s !== from)];
+}
+
+export function canTransition(from: WorkOrderStatus, to: WorkOrderStatus): boolean {
+  return allowedTransitions(from).includes(to);
+}
+
+/**
+ * Which status a board drag should land on. Dropping a card into a phase
+ * column is ambiguous — a phase holds several statuses — so this picks the
+ * phase's representative status when that move is legal, and otherwise the
+ * first legal status inside that phase. `null` means the move isn't allowed
+ * at all, which the board reports instead of silently snapping back.
+ */
+export function statusForPhaseDrop(
+  from: WorkOrderStatus,
+  phase: PhaseFamily
+): WorkOrderStatus | null {
+  const allowed = allowedTransitions(from);
+  const preferred = PHASE_DEFAULT_STATUS[phase];
+  if (allowed.includes(preferred)) return preferred;
+  return allowed.find((status) => phaseForStatus(status) === phase) ?? null;
 }

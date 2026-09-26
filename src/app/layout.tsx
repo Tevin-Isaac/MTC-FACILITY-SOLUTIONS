@@ -41,15 +41,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-canvas text-ink">
         {children}
         <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "var(--raised)",
-              color: "var(--foreground)",
-              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--ink)",
+              border: "none",
+              borderRadius: "14px",
+              boxShadow: "0 18px 40px -20px rgba(16,24,40,0.28)",
             },
           }}
         />

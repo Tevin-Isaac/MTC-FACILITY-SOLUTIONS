@@ -1,30 +1,36 @@
 import { PHASE_FAMILIES, PHASE_COLOR, phaseForStatus } from "@/lib/domain";
 import type { WorkOrderStatus } from "@/types/work-order";
 
+/** Segmented lifecycle bar: one block per phase family, filled up to the
+    work order's current phase. */
 export function PhaseProgressBar({ status }: { status: WorkOrderStatus }) {
   const currentPhase = phaseForStatus(status);
   const currentIndex = PHASE_FAMILIES.indexOf(currentPhase);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <ol className="flex items-end gap-1.5">
       {PHASE_FAMILIES.map((phase, i) => {
         const reached = i <= currentIndex;
-        const color = reached ? PHASE_COLOR[phase] : "var(--border)";
+        const current = i === currentIndex;
         return (
-          <div key={phase} className="flex flex-1 flex-col gap-1.5" title={phase}>
-            <div
+          <li key={phase} className="flex flex-1 flex-col gap-2" title={phase}>
+            <span
               className="h-1.5 rounded-full transition-colors"
-              style={{ backgroundColor: color }}
+              style={{
+                backgroundColor: reached ? PHASE_COLOR[phase] : "var(--surface-tint)",
+              }}
             />
             <span
-              className="hidden truncate text-[10px] font-medium sm:block"
-              style={{ color: reached ? color : "var(--muted)" }}
+              className={`hidden truncate text-[10px] sm:block ${
+                current ? "font-semibold" : "font-medium"
+              }`}
+              style={{ color: reached ? PHASE_COLOR[phase] : "var(--ink-3)" }}
             >
               {phase}
             </span>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

@@ -1,94 +1,255 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   Direction: soft and modern rather than dense-admin. Large radii, tinted
+   fills instead of hard borders, one soft shadow, and a single saturated
+   brand surface per screen. Status colour is always a pair — a tint for the
+   background and a deep shade for the text on it — so chips read as soft
+   without losing contrast.
+--------------------------------------------------------------------------- */
+
 :root {
-  --background: #f6f7f9;
-  --foreground: #14171f;
+  --canvas: #f4f5f8;
   --surface: #ffffff;
-  --raised: #ffffff;
-  --border: #e4e7ec;
-  --muted: #5b6474;
+  --surface-sunken: #f8f9fb;
+  --surface-tint: #f1f3f9;
+  --hairline: rgba(15, 23, 42, 0.07);
+  --hairline-strong: rgba(15, 23, 42, 0.12);
 
-  --brand-navy: #0b1e3c;
-  --brand-navy-dark: #060d1d;
-  --brand-gold: #eec14a;
-  --brand-gold-dark: #c99a2e;
+  --ink: #131823;
+  --ink-2: #5a6478;
+  --ink-3: #8a93a6;
 
-  /* Chart tokens (see docs/data-model.md / dataviz skill for rationale) */
-  --chart-sequential: #2a78d6;
-  --chart-grid: #e1e0d9;
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
+  /* MTC brand: navy + gold, softened. The deep navy is the hero surface;
+     the tints are what most of the UI actually sits on. */
+  --navy: #1b3868;
+  --navy-deep: #12274a;
+  --navy-tint: #eef2fa;
+  --navy-ink: #1b3868;
+  --gold: #eec14a;
+  --gold-deep: #a9791a;
+  --gold-tint: #fdf5e0;
 
-  /* Phase-family status colors: group the granular pipeline into 7
-     meaningful families, one hue each, distinct from chart/status colors.
-     See docs/data-model.md and reference_dashboard_design_ideas memory. */
-  --phase-intake: #64748b;
-  --phase-dispatch: #2563eb;
-  --phase-quote: #7c3aed;
-  --phase-completion: #0d9488;
-  --phase-billing: #059669;
-  --phase-closed: #9ca3af;
-  --phase-exception: #f59e0b;
+  --good: #0b7a4b;
+  --good-tint: #e7f7ee;
+  --warning: #9a6200;
+  --warning-tint: #fdf3e0;
+  --serious: #a8481c;
+  --serious-tint: #fdeee6;
+  --critical: #ae2727;
+  --critical-tint: #fdecec;
+
+  /* Phase families: one hue each, with a tint for chips and columns. */
+  --phase-intake: #4d5a70;
+  --phase-intake-tint: #eef0f4;
+  --phase-dispatch: #1f4fb5;
+  --phase-dispatch-tint: #eaf0fd;
+  --phase-quote: #6636bd;
+  --phase-quote-tint: #f2ecfd;
+  --phase-completion: #0b7676;
+  --phase-completion-tint: #e5f5f5;
+  --phase-billing: #0a6f4a;
+  --phase-billing-tint: #e6f5ee;
+  --phase-closed: #767f91;
+  --phase-closed-tint: #f1f2f5;
+  --phase-exception: #a2650a;
+  --phase-exception-tint: #fcf2df;
+
+  --chart-sequential: #3565cc;
+  --chart-grid: rgba(15, 23, 42, 0.08);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
   --color-surface: var(--surface);
-  --color-raised: var(--raised);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-brand-navy: var(--brand-navy);
-  --color-brand-navy-dark: var(--brand-navy-dark);
-  --color-brand-gold: var(--brand-gold);
-  --color-brand-gold-dark: var(--brand-gold-dark);
-  --color-status-good: var(--status-good);
-  --color-status-warning: var(--status-warning);
-  --color-status-serious: var(--status-serious);
-  --color-status-critical: var(--status-critical);
+  --color-sunken: var(--surface-sunken);
+  --color-tint: var(--surface-tint);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-navy-tint: var(--navy-tint);
+  --color-navy-ink: var(--navy-ink);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-gold-tint: var(--gold-tint);
+
+  --color-good: var(--good);
+  --color-good-tint: var(--good-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-serious: var(--serious);
+  --color-serious-tint: var(--serious-tint);
+  --color-critical: var(--critical);
+  --color-critical-tint: var(--critical-tint);
+
   --color-phase-intake: var(--phase-intake);
+  --color-phase-intake-tint: var(--phase-intake-tint);
   --color-phase-dispatch: var(--phase-dispatch);
+  --color-phase-dispatch-tint: var(--phase-dispatch-tint);
   --color-phase-quote: var(--phase-quote);
+  --color-phase-quote-tint: var(--phase-quote-tint);
   --color-phase-completion: var(--phase-completion);
+  --color-phase-completion-tint: var(--phase-completion-tint);
   --color-phase-billing: var(--phase-billing);
+  --color-phase-billing-tint: var(--phase-billing-tint);
   --color-phase-closed: var(--phase-closed);
+  --color-phase-closed-tint: var(--phase-closed-tint);
   --color-phase-exception: var(--phase-exception);
+  --color-phase-exception-tint: var(--phase-exception-tint);
+
+  /* Soft geometry: tiles are noticeably rounder than a stock admin card. */
+  --radius-control: 12px;
+  --radius-card: 18px;
+  --radius-tile: 24px;
+  --radius-hero: 28px;
+
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 30px -18px rgba(16, 24, 40, 0.18);
+  --shadow-lift: 0 2px 4px rgba(16, 24, 40, 0.05), 0 18px 40px -20px rgba(16, 24, 40, 0.28);
+  --shadow-hero: 0 20px 50px -28px rgba(18, 39, 74, 0.7);
+
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #0b0d12;
-    --foreground: #eef1f6;
-    --surface: #12151c;
-    --raised: #1a1e27;
-    --border: #262b36;
-    --muted: #93a0b8;
-    --chart-sequential: #3987e5;
-    --chart-grid: #2c2c2a;
+    --canvas: #0c0e14;
+    --surface: #14171f;
+    --surface-sunken: #10131a;
+    --surface-tint: #1a1e28;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --hairline-strong: rgba(255, 255, 255, 0.14);
+
+    --ink: #eef1f6;
+    --ink-2: #a3aec2;
+    --ink-3: #78829a;
+
+    --navy: #4a74c8;
+    --navy-deep: #16233c;
+    --navy-tint: #1a2334;
+    --navy-ink: #b9cdf2;
+    --gold: #eec14a;
+    --gold-deep: #f0cd6c;
+    --gold-tint: #2a2313;
+
+    --good: #4ec08a;
+    --good-tint: #12291f;
+    --warning: #e0b055;
+    --warning-tint: #2a2416;
+    --serious: #e3956e;
+    --serious-tint: #2c1f17;
+    --critical: #ef8383;
+    --critical-tint: #2d1919;
+
+    --phase-intake: #9aa6bb;
+    --phase-intake-tint: #1c1f28;
+    --phase-dispatch: #7ba3ef;
+    --phase-dispatch-tint: #172234;
+    --phase-quote: #b394f0;
+    --phase-quote-tint: #221d33;
+    --phase-completion: #5cc0bd;
+    --phase-completion-tint: #12252a;
+    --phase-billing: #5bc190;
+    --phase-billing-tint: #122620;
+    --phase-closed: #8a93a6;
+    --phase-closed-tint: #1b1e26;
+    --phase-exception: #e0b055;
+    --phase-exception-tint: #2a2416;
+
+    --chart-sequential: #6e9bef;
+    --chart-grid: rgba(255, 255, 255, 0.09);
   }
 }
 
 :root[data-theme="dark"] {
-  --background: #0b0d12;
-  --foreground: #eef1f6;
-  --surface: #12151c;
-  --raised: #1a1e27;
-  --border: #262b36;
-  --muted: #93a0b8;
-  --chart-sequential: #3987e5;
-  --chart-grid: #2c2c2a;
+  --canvas: #0c0e14;
+  --surface: #14171f;
+  --surface-sunken: #10131a;
+  --surface-tint: #1a1e28;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.14);
+
+  --ink: #eef1f6;
+  --ink-2: #a3aec2;
+  --ink-3: #78829a;
+
+  --navy: #4a74c8;
+  --navy-deep: #16233c;
+  --navy-tint: #1a2334;
+  --navy-ink: #b9cdf2;
+  --gold: #eec14a;
+  --gold-deep: #f0cd6c;
+  --gold-tint: #2a2313;
+
+  --good: #4ec08a;
+  --good-tint: #12291f;
+  --warning: #e0b055;
+  --warning-tint: #2a2416;
+  --serious: #e3956e;
+  --serious-tint: #2c1f17;
+  --critical: #ef8383;
+  --critical-tint: #2d1919;
+
+  --phase-intake: #9aa6bb;
+  --phase-intake-tint: #1c1f28;
+  --phase-dispatch: #7ba3ef;
+  --phase-dispatch-tint: #172234;
+  --phase-quote: #b394f0;
+  --phase-quote-tint: #221d33;
+  --phase-completion: #5cc0bd;
+  --phase-completion-tint: #12252a;
+  --phase-billing: #5bc190;
+  --phase-billing-tint: #122620;
+  --phase-closed: #8a93a6;
+  --phase-closed-tint: #1b1e26;
+  --phase-exception: #e0b055;
+  --phase-exception-tint: #2a2416;
+
+  --chart-sequential: #6e9bef;
+  --chart-grid: rgba(255, 255, 255, 0.09);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* iOS-style sheet: the app frame recedes slightly when a drawer owns the screen.
+   Blur lives on the overlay, not the page — filtering the whole app reads as a
+   broken UI rather than a sheet. */
+.app-frame {
+  transform-origin: center top;
+  transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html[data-drawer-open] .app-frame {
+  transform: scale(0.985) translateY(4px);
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbars: thin and unobtrusive so dense tables stay calm. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

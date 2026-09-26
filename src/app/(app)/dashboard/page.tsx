@@ -1,32 +1,49 @@
-import Link from "next/link";
 import {
   ClipboardList,
   AlertTriangle,
   FileClock,
   ReceiptText,
-  ArrowRight,
 } from "lucide-react";
 import { KpiCard } from "@/components/KpiCard";
 import { DashboardHero } from "@/components/DashboardHero";
-import { StatusBadge, PriorityBadge } from "@/components/Badge";
 import { CategoryBarChart } from "@/components/charts/CategoryBarChart";
 import { SlaDonut } from "@/components/charts/SlaDonut";
+import { Reveal } from "@/components/motion";
+import { Tile, SectionHead } from "@/components/ui";
 import {
-  accountForSite as accountForSiteFn,
-  siteById as siteByIdFn,
+  DashboardAttention,
+  DashboardQueue,
+  DashboardActionQueues,
+  AnimatedPhaseBars,
+} from "@/components/DashboardWidgets";
+import {
   phaseForStatus,
   slaRisk,
-  slaCountdown,
   seededTrend,
   PHASE_FAMILIES,
 } from "@/lib/domain";
 import { getAppData } from "@/lib/data/queries";
+import { getLittleElmWeather } from "@/lib/weather";
 import { TERMINAL_STATUSES } from "@/types/work-order";
 
+function greetingFor(date: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(date)
+  );
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default async function DashboardPage() {
-  const { accounts, sites, workOrders: allWorkOrders } = await getAppData();
-  const siteById = (id: string) => siteByIdFn(sites, id);
-  const accountForSite = (id: string) => accountForSiteFn(sites, accounts, id);
+  const [{ workOrders: allWorkOrders }, weather] = await Promise.all([
+    getAppData(),
+    getLittleElmWeather(),
+  ]);
 
   const openWorkOrders = allWorkOrders.filter(
     (wo) => !TERMINAL_STATUSES.includes(wo.status)
@@ -42,9 +59,11 @@ export default async function DashboardPage() {
   );
 
   const phaseCounts = PHASE_FAMILIES.map((phase) => ({
-    label: phase,
+    phase,
     value: allWorkOrders.filter((wo) => phaseForStatus(wo.status) === phase).length,
   }));
+  const phaseTotal = phaseCounts.reduce((n, p) => n + p.value, 0);
+  const phaseMax = Math.max(1, ...phaseCounts.map((p) => p.value));
 
   const tradeCounts = Object.entries(
     allWorkOrders.reduce<Record<string, number>>((acc, wo) => {
@@ -66,7 +85,10 @@ export default async function DashboardPage() {
     .filter((r) => r.risk !== "on_track")
     .sort((a, b) => Number(b.risk === "breached") - Number(a.risk === "breached"));
 
-  const overdueAr = readyToBillOrInvoice.reduce((sum, wo) => sum + (wo.nte ?? 0), 0);
+  const readyToBillValue = readyToBillOrInvoice.reduce(
+    (sum, wo) => sum + (wo.nte ?? 0),
+    0
+  );
 
   const myQueue = [...openWorkOrders].sort((a, b) => {
     const aCd = a.slaResolveBy ? new Date(a.slaResolveBy).getTime() : Infinity;
@@ -74,183 +96,127 @@ export default async function DashboardPage() {
     return aCd - bCd;
   });
 
-  const needsAttentionCount = slaCounts.breached + slaCounts.atRisk;
-  const summary = `${needsAttentionCount} WO${needsAttentionCount === 1 ? "" : "s"} need${
-    needsAttentionCount === 1 ? "s" : ""
-  } attention (${slaCounts.atRisk} at risk, ${slaCounts.breached} breached), ${pendingQuotes.length} quote${
-    pendingQuotes.length === 1 ? "" : "s"
-  } awaiting client, $${overdueAr.toLocaleString()} ready to bill.`;
+  const attentionCount = slaCounts.breached + slaCounts.atRisk;
+  const summary =
+    attentionCount === 0
+      ? `All ${openWorkOrders.length} open work orders are inside SLA. ${pendingQuotes.length} awaiting a client decision.`
+      : `${attentionCount} work order${attentionCount === 1 ? "" : "s"} need attention — ${
+          slaCounts.atRisk
+        } at risk, ${slaCounts.breached} breached. ${pendingQuotes.length} quote${
+          pendingQuotes.length === 1 ? "" : "s"
+        } awaiting a client decision.`;
 
   return (
-    <div className="flex flex-col gap-8 p-6 md:p-8">
-      <DashboardHero greeting="Good afternoon, Tevin" summary={summary} />
+    <div className="mx-auto flex max-w-[1500px] flex-col gap-5 p-4 sm:p-6 lg:gap-6 lg:p-8">
+      <DashboardHero
+        greeting={`${greetingFor(new Date())}, Tevin`}
+        summary={summary}
+        weather={weather}
+        stats={[
+          {
+            label: "Open work orders",
+            value: String(openWorkOrders.length),
+            ratio: allWorkOrders.length ? openWorkOrders.length / allWorkOrders.length : 0,
+          },
+          {
+            label: "Breaching SLA",
+            value: String(slaCounts.breached),
+            ratio: openWorkOrders.length ? slaCounts.breached / openWorkOrders.length : 0,
+          },
+          {
+            label: "Ready to bill",
+            value: `$${(readyToBillValue / 1000).toFixed(1)}k`,
+          },
+        ]}
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Open work orders"
           value={openWorkOrders.length}
           icon={<ClipboardList className="h-5 w-5" />}
           trend={seededTrend(11, openWorkOrders.length)}
           deltaGoodDirection="down"
+          index={0}
         />
         <KpiCard
           label="Emergency, open"
           value={emergencyOpen.length}
           icon={<AlertTriangle className="h-5 w-5" />}
-          tone="danger"
+          tone="critical"
           trend={seededTrend(23, emergencyOpen.length)}
           deltaGoodDirection="down"
+          index={1}
         />
         <KpiCard
-          label="Pending quotes"
+          label="Awaiting client decision"
           value={pendingQuotes.length}
           icon={<FileClock className="h-5 w-5" />}
           tone="warning"
           trend={seededTrend(37, pendingQuotes.length)}
           deltaGoodDirection="down"
+          index={2}
         />
         <KpiCard
-          label="Ready to bill / invoice"
+          label="Ready to bill"
           value={readyToBillOrInvoice.length}
           icon={<ReceiptText className="h-5 w-5" />}
+          tone="good"
           trend={seededTrend(53, readyToBillOrInvoice.length)}
           deltaGoodDirection="up"
+          index={3}
         />
+      </div>
+
+      <Reveal delay={0.08}>
+        <DashboardActionQueues
+          unassigned={openWorkOrders.filter((wo) => !wo.vendorId)}
+          quotes={pendingQuotes}
+          readyToBill={readyToBillOrInvoice}
+          onHold={openWorkOrders.filter((wo) => wo.status === "on_hold")}
+        />
+      </Reveal>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Reveal className="lg:col-span-2" delay={0.1}>
+          <DashboardAttention items={needsAttention.slice(0, 6)} />
+        </Reveal>
+
+        <Reveal delay={0.16}>
+          <Tile className="h-full">
+            <SectionHead title="SLA health" sub="Across all open work orders" />
+            <div className="mt-6">
+              <SlaDonut counts={slaCounts} />
+            </div>
+          </Tile>
+        </Reveal>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
-          <h2 className="text-sm font-semibold">SLA health</h2>
-          <p className="mt-1 text-xs text-muted">Across all open work orders</p>
-          <div className="mt-4">
-            <SlaDonut counts={slaCounts} />
-          </div>
-        </div>
+        <Reveal delay={0.2}>
+          <Tile className="h-full">
+            <SectionHead title="Pipeline" sub="All work orders by phase family" />
+            <AnimatedPhaseBars
+              phaseCounts={phaseCounts}
+              phaseMax={phaseMax}
+              phaseTotal={phaseTotal}
+            />
+          </Tile>
+        </Reveal>
 
-        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
-          <h2 className="text-sm font-semibold">Work orders by phase</h2>
-          <p className="mt-1 text-xs text-muted">All work orders, current phase family</p>
-          <div className="mt-2">
-            <CategoryBarChart data={phaseCounts} />
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 lg:col-span-1 transition-shadow hover:shadow-md">
-          <h2 className="text-sm font-semibold">Work orders by trade</h2>
-          <p className="mt-1 text-xs text-muted">All work orders, by trade</p>
-          <div className="mt-2">
-            <CategoryBarChart data={tradeCounts} />
-          </div>
-        </div>
+        <Reveal className="lg:col-span-2" delay={0.26}>
+          <Tile className="h-full">
+            <SectionHead title="Work orders by trade" sub="All work orders, current volume" />
+            <div className="mt-4">
+              <CategoryBarChart data={tradeCounts} />
+            </div>
+          </Tile>
+        </Reveal>
       </div>
 
-      {needsAttention.length > 0 && (
-        <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-status-critical/20">
-          <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-            <AlertTriangle className="h-4 w-4 text-status-critical" />
-            <h2 className="text-sm font-semibold">Needs attention</h2>
-            <span className="ml-auto rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-              {needsAttention.length}
-            </span>
-          </div>
-          <ul className="divide-y divide-border">
-            {needsAttention.map(({ wo, risk }) => {
-              const site = siteById(wo.siteId);
-              return (
-                <li key={wo.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                  <Link href={`/work-orders/${wo.id}`} className="font-medium tabular-nums hover:underline">
-                    {wo.woNumber}
-                  </Link>
-                  <span className="text-muted">{site?.name}</span>
-                  <PriorityBadge priority={wo.priority} />
-                  <span
-                    className={`ml-auto rounded-full px-2.5 py-1 text-xs font-medium ${
-                      risk === "breached"
-                        ? "bg-red-50 text-red-700"
-                        : "bg-amber-50 text-amber-800"
-                    }`}
-                  >
-                    {risk === "breached" ? "SLA breached" : "SLA at risk"}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold">My queue</h2>
-          <Link
-            href="/work-orders"
-            className="inline-flex items-center gap-1 text-sm font-medium text-brand-navy underline-offset-4 hover:underline"
-          >
-            View all
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-200 text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-5 py-3 font-medium">WO #</th>
-                <th className="px-5 py-3 font-medium">Site</th>
-                <th className="px-5 py-3 font-medium">Trade</th>
-                <th className="px-5 py-3 font-medium">Priority</th>
-                <th className="px-5 py-3 font-medium">SLA</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {myQueue.slice(0, 6).map((wo) => {
-                const site = siteById(wo.siteId);
-                const account = accountForSite(wo.siteId);
-                const countdown = slaCountdown(wo);
-                const risk = slaRisk(wo);
-                return (
-                  <tr key={wo.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-3 font-medium tabular-nums">
-                      <Link href={`/work-orders/${wo.id}`} className="hover:underline">
-                        {wo.woNumber}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div>{site?.name}</div>
-                      <div className="text-xs text-muted">{account?.name}</div>
-                    </td>
-                    <td className="px-5 py-3 capitalize">{wo.trade.replace(/_/g, " ")}</td>
-                    <td className="px-5 py-3">
-                      <PriorityBadge priority={wo.priority} />
-                    </td>
-                    <td className="px-5 py-3">
-                      {countdown ? (
-                        <span
-                          className={
-                            risk === "breached"
-                              ? "font-medium text-status-critical"
-                              : risk === "at_risk"
-                                ? "font-medium text-status-warning"
-                                : "text-muted"
-                          }
-                        >
-                          {countdown}
-                        </span>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <StatusBadge status={wo.status} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Reveal delay={0.3}>
+        <DashboardQueue items={myQueue.slice(0, 7)} />
+      </Reveal>
     </div>
   );
 }

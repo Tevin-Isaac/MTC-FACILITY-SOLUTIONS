@@ -2,9 +2,18 @@
 
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { IconBadge, type Tone } from "@/components/ui";
+import { EASE_OUT } from "@/components/motion";
+
+const TONE_VAR: Record<string, string> = {
+  navy: "var(--navy)",
+  warning: "var(--warning)",
+  critical: "var(--critical)",
+  good: "var(--good)",
+};
 
 export function KpiCard({
   label,
@@ -12,7 +21,9 @@ export function KpiCard({
   icon,
   trend,
   deltaGoodDirection = "down",
-  tone = "default",
+  tone = "navy",
+  index = 0,
+  suffix,
 }: {
   label: string;
   value: number;
@@ -23,35 +34,43 @@ export function KpiCard({
   trend: number[];
   /** Whether a falling trend counts as good news (e.g. SLA breaches) or bad (e.g. revenue). */
   deltaGoodDirection?: "down" | "up";
-  tone?: "default" | "warning" | "danger";
+  tone?: Extract<Tone, "navy" | "warning" | "critical" | "good">;
+  /** Stagger position within the KPI row. */
+  index?: number;
+  suffix?: string;
 }) {
+  const reduce = useReducedMotion();
   const first = trend[0] ?? 0;
   const last = trend[trend.length - 1] ?? 0;
   const delta = last - first;
   const isGood = deltaGoodDirection === "down" ? delta <= 0 : delta >= 0;
-
-  const toneStyles = {
-    default: "bg-blue-500 text-white",
-    warning: "bg-amber-500 text-white",
-    danger: "bg-red-500 text-white",
-  }[tone];
-
-  const sparkColor = tone === "danger" ? "var(--status-critical)" : "var(--chart-sequential)";
+  const accent = TONE_VAR[tone];
 
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.15 }}
-      className="flex flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm ring-1 ring-black/5 hover:shadow-md"
+      initial={reduce ? false : { opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={reduce ? undefined : { y: -5 }}
+      transition={{ duration: 0.5, delay: index * 0.07, ease: EASE_OUT }}
+      className="group relative flex flex-col overflow-hidden rounded-tile bg-surface shadow-soft transition-shadow duration-300 hover:shadow-lift"
     >
-      <div className="flex items-center justify-between">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneStyles}`}>
-          {icon}
-        </div>
+      {/* Tone wash in the corner — gives each tile an identity without a border. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-40 blur-2xl transition-opacity duration-300 group-hover:opacity-90"
+        style={{ background: accent }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+      />
+
+      <div className="relative flex items-start justify-between gap-2 px-5 pt-5">
+        <IconBadge tone={tone}>{icon}</IconBadge>
         {delta !== 0 && (
           <span
-            className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-              isGood ? "text-status-good" : "text-status-critical"
+            className={`inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-semibold ${
+              isGood ? "bg-good-tint text-good" : "bg-critical-tint text-critical"
             }`}
           >
             {delta > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
@@ -59,13 +78,19 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <div>
-        <p className="text-2xl font-semibold leading-none">
+
+      <div className="relative px-5 pt-5">
+        <p className="flex items-baseline gap-1 text-[44px] font-semibold leading-none tracking-[-0.035em] tabular-nums">
           <AnimatedNumber value={value} />
+          {suffix && <span className="text-xl font-medium text-ink-3">{suffix}</span>}
         </p>
-        <p className="mt-1 text-sm text-muted">{label}</p>
+        <p className="mt-2.5 text-[13px] font-medium text-ink-2">{label}</p>
       </div>
-      <Sparkline data={trend} color={sparkColor} />
+
+      {/* Full-bleed to the tile edges: the chart is part of the tile shape. */}
+      <div className="relative mt-5">
+        <Sparkline data={trend} color={accent} height={70} fillOpacity={0.22} />
+      </div>
     </motion.div>
   );
 }

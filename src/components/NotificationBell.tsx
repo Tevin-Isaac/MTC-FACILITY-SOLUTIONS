@@ -7,6 +7,7 @@ import { Bell, AlertTriangle, AlertOctagon } from "lucide-react";
 import { slaRisk, slaCountdown } from "@/lib/domain";
 import { useAppData } from "@/components/AppDataProvider";
 import { TERMINAL_STATUSES } from "@/types/work-order";
+import { Empty } from "@/components/ui";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -23,12 +24,12 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative rounded-full p-2 text-muted hover:bg-black/5"
+        className="relative rounded-control p-2 text-ink-3 transition-colors hover:bg-tint hover:text-ink"
         aria-label="Notifications"
       >
         <Bell className="h-5 w-5" />
         {alerts.length > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-status-critical text-[10px] font-semibold text-white">
+          <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-critical text-[10px] font-semibold text-white">
             {alerts.length}
           </span>
         )}
@@ -43,19 +44,19 @@ export function NotificationBell() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="fixed right-3 top-16 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-raised shadow-xl sm:right-6"
+              className="fixed right-3 top-16 z-50 w-[min(21rem,calc(100vw-1.5rem))] overflow-hidden rounded-tile bg-surface shadow-lift sm:right-6"
             >
-              <div className="border-b border-border px-4 py-3">
+              <div className="px-4 py-3.5">
                 <h3 className="text-sm font-semibold">SLA alerts</h3>
-                <p className="text-xs text-muted">
-                  {alerts.length} work order{alerts.length === 1 ? "" : "s"} need attention
+                <p className="text-xs text-ink-3">
+                  {alerts.length === 0
+                    ? "Everything on track"
+                    : `${alerts.length} work order${alerts.length === 1 ? "" : "s"} need attention`}
                 </p>
               </div>
-              <div className="max-h-80 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto px-2 pb-2">
                 {alerts.length === 0 && (
-                  <p className="px-4 py-6 text-center text-sm text-muted">
-                    Nothing at risk right now.
-                  </p>
+                  <Empty title="Nothing at risk right now" />
                 )}
                 {alerts.map(({ wo, risk }) => {
                   const site = siteById(wo.siteId);
@@ -65,20 +66,20 @@ export function NotificationBell() {
                       key={wo.id}
                       href={`/work-orders/${wo.id}`}
                       onClick={() => setOpen(false)}
-                      className="flex items-start gap-3 border-b border-border px-4 py-3 text-sm last:border-0 hover:bg-black/5"
+                      className="flex items-start gap-3 rounded-card px-2.5 py-2.5 text-sm transition-colors hover:bg-tint"
                     >
                       {risk === "breached" ? (
-                        <AlertOctagon className="mt-0.5 h-4 w-4 shrink-0 text-status-critical" />
+                        <AlertOctagon className="mt-0.5 h-4 w-4 shrink-0 text-critical" />
                       ) : (
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium tabular-nums">{wo.woNumber}</p>
-                        <p className="truncate text-xs text-muted">{site?.name}</p>
+                        <p className="truncate text-xs text-ink-3">{site?.name}</p>
                         {countdown && (
                           <p
                             className={`text-xs font-medium ${
-                              risk === "breached" ? "text-status-critical" : "text-status-warning"
+                              risk === "breached" ? "text-critical" : "text-warning"
                             }`}
                           >
                             {countdown}

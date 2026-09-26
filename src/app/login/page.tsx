@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseIsConfigured } from "@/lib/supabase/env";
+import { buttonClass, inputClass, labelClass } from "@/components/ui";
 
 function LoginForm() {
   const router = useRouter();
@@ -25,7 +26,7 @@ function LoginForm() {
       return;
     }
     if (!email) {
-      setError("Enter your email above first, then click \"Forgot password\".");
+      setError('Enter your email above first, then click "Forgot password".');
       return;
     }
     setResetting(true);
@@ -80,84 +81,101 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-brand-navy px-6">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white p-3 shadow-lg">
-        <Image
-          src="/mtc-logo.png"
-          alt="MTC Facility Solutions"
-          width={72}
-          height={72}
-          className="h-full w-full object-contain"
-          priority
-        />
-      </div>
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-navy-deep px-5 py-12">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-1/4 h-80 w-80 rounded-full bg-gold/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-white/5 blur-3xl"
+      />
 
-      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-raised p-6 shadow-2xl">
-        <h1 className="text-lg font-semibold text-foreground">Sign in</h1>
-        <p className="mt-1 text-sm text-muted">MTC Work Order Platform</p>
-
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <div>
-            <label htmlFor="email" className="text-xs font-medium text-muted">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold"
-              placeholder="you@mtcfacilitysolutions.com"
+      <div className="relative w-full max-w-sm">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-card bg-white p-2.5 shadow-lift">
+            <Image
+              src="/mtc-logo.png"
+              alt="MTC Facility Solutions"
+              width={64}
+              height={64}
+              className="h-full w-full object-contain"
+              priority
             />
-          </div>
+          </span>
           <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="text-xs font-medium text-muted">
-                Password
+            <h1 className="text-xl font-semibold text-white">MTC Work Order Platform</h1>
+            <p className="mt-1 text-sm text-white/60">Sign in to continue</p>
+          </div>
+        </div>
+
+        <div className="mt-7 rounded-tile bg-surface p-6 shadow-lift">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="email" className={labelClass}>
+                Email
               </label>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={resetting}
-                className="text-xs font-medium text-brand-navy hover:underline disabled:opacity-50"
-              >
-                {resetting ? "Sending…" : "Forgot password?"}
-              </button>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+                placeholder="you@mtcfacilitysolutions.com"
+              />
             </div>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-gold"
-              placeholder="••••••••"
-            />
-          </div>
 
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-status-critical">
-              {error}
-            </p>
-          )}
+            <div>
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="password" className={labelClass}>
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetting}
+                  className="mb-1.5 text-xs font-medium text-navy-ink hover:underline disabled:opacity-50"
+                >
+                  {resetting ? "Sending…" : "Forgot password?"}
+                </button>
+              </div>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-navy-dark disabled:opacity-50"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+            {error && (
+              <p className="rounded-control bg-critical-tint px-3 py-2.5 text-xs text-critical">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={buttonClass("primary", "mt-1 w-full")}
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+        </div>
+
+        {!configured && (
+          <p className="mt-5 text-center text-xs text-white/45">
+            Running without a connected database — this form is wired up and will work
+            once Supabase credentials are added.
+          </p>
+        )}
       </div>
-
-      {!configured && (
-        <p className="max-w-sm text-center text-xs text-white/50">
-          Running without a connected database — this form is wired up and
-          will work once Supabase credentials are added.
-        </p>
-      )}
     </main>
   );
 }

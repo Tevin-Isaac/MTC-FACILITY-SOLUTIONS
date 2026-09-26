@@ -29,7 +29,8 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-navy text-xs font-semibold text-white"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-xs font-semibold text-white transition-opacity hover:opacity-90"
+        aria-label="Account menu"
       >
         MT
       </button>
@@ -37,13 +38,13 @@ export function UserMenu() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-raised shadow-xl">
+          <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-card bg-surface p-1.5 shadow-lift">
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-black/5"
+              className="flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-sm transition-colors hover:bg-tint"
             >
-              <LogOut className="h-4 w-4 text-muted" />
+              <LogOut className="h-4 w-4 text-ink-3" />
               Sign out
             </button>
           </div>

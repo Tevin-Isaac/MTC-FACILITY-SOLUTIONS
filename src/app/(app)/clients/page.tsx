@@ -1,52 +1,119 @@
-import { Building2 } from "lucide-react";
-import { getAccounts, getSites } from "@/lib/data/queries";
+import Link from "next/link";
+import { Building2, MapPin, Phone } from "lucide-react";
+import { getAppData } from "@/lib/data/queries";
+import { TERMINAL_STATUSES } from "@/types/work-order";
+import { Tile, Pill, Empty, Money } from "@/components/ui";
 
 export default async function ClientsPage() {
-  const [accounts, sites] = await Promise.all([getAccounts(), getSites()]);
+  const { accounts, sites, workOrders } = await getAppData();
+
+  // Counts per account and per site: the audit flagged that the card list
+  // carried no volume or value at all.
+  const openByS = new Map<string, number>();
+  const valueByS = new Map<string, number>();
+  for (const wo of workOrders) {
+    if (TERMINAL_STATUSES.includes(wo.status)) continue;
+    openByS.set(wo.siteId, (openByS.get(wo.siteId) ?? 0) + 1);
+    valueByS.set(wo.siteId, (valueByS.get(wo.siteId) ?? 0) + (wo.nte ?? 0));
+  }
+
+  const rows = accounts.map((account) => {
+    const accountSites = sites.filter((s) => s.accountId === account.id);
+    const openCount = accountSites.reduce((n, s) => n + (openByS.get(s.id) ?? 0), 0);
+    const openValue = accountSites.reduce((n, s) => n + (valueByS.get(s.id) ?? 0), 0);
+    return { account, accountSites, openCount, openValue };
+  });
 
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-8">
+    <div className="mx-auto flex max-w-[1500px] flex-col gap-5 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <p className="mt-1 text-sm text-muted">
-          Accounts and their sites. {accounts.length} accounts,{" "}
-          {sites.length} sites.
+        <h1 className="text-2xl font-semibold tracking-[-0.02em]">Clients</h1>
+        <p className="mt-1 text-sm text-ink-2">
+          {accounts.length} parent accounts · {sites.length} sites
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {accounts.map((account) => {
-          const accountSites = sites.filter((s) => s.accountId === account.id);
-          return (
-            <div
-              key={account.id}
-              className="rounded-2xl bg-surface shadow-sm ring-1 ring-black/5 p-5 transition-shadow hover:shadow-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-navy text-white">
+      {rows.length === 0 ? (
+        <Tile>
+          <Empty title="No accounts yet" />
+        </Tile>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {rows.map(({ account, accountSites, openCount, openValue }) => (
+            <Tile key={account.id}>
+              <Link href={`/clients/${account.id}`} className="flex items-start gap-3.5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-navy-tint text-navy-ink">
                   <Building2 className="h-5 w-5" />
-                </div>
-                <div>
+                </span>
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold">{account.name}</p>
-                  <p className="text-xs capitalize text-muted">{account.type}</p>
+                  <p className="text-xs capitalize text-ink-3">
+                    {account.type} · {accountSites.length}{" "}
+                    {accountSites.length === 1 ? "site" : "sites"}
+                  </p>
                 </div>
-              </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <Pill tone={openCount > 0 ? "navy" : "neutral"}>
+                    {openCount} open
+                  </Pill>
+                  {openValue > 0 && (
+                    <span className="text-xs font-medium tabular-nums text-ink-2">
+                      <Money amount={openValue} /> authorised
+                    </span>
+                  )}
+                </div>
+              </Link>
 
-              <ul className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-                {accountSites.length === 0 && (
-                  <li className="text-sm text-muted">No sites on file.</li>
-                )}
-                {accountSites.map((site) => (
-                  <li key={site.id} className="text-sm">
-                    <p className="font-medium">{site.name}</p>
-                    <p className="text-xs text-muted">{site.address}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
+              {accountSites.length === 0 ? (
+                <Empty title="No sites on file" />
+              ) : (
+                <ul className="mt-4 flex flex-col gap-1.5">
+                  {accountSites.map((site) => {
+                    const open = openByS.get(site.id) ?? 0;
+                    return (
+                      <li
+                        key={site.id}
+                        className="flex items-start gap-3 rounded-card bg-sunken px-3.5 py-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {site.storeCode && (
+                              <span className="mr-1.5 tabular-nums text-ink-3">
+                                {site.storeCode}
+                              </span>
+                            )}
+                            {site.name}
+                          </p>
+                          <p className="mt-0.5 flex items-start gap-1.5 text-xs text-ink-3">
+                            <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span className="truncate">{site.address}</span>
+                          </p>
+                          {site.contactName && (
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              {site.contactName}
+                              {site.contactPhone && ` · ${site.contactPhone}`}
+                            </p>
+                          )}
+                        </div>
+                        {open > 0 && (
+                          <Link
+                            href={`/work-orders?site=${site.id}`}
+                            className="shrink-0"
+                            aria-label={`${open} open work orders at ${site.name}`}
+                          >
+                            <Pill tone="navy">{open}</Pill>
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Tile>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

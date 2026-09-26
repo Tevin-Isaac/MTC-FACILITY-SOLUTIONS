@@ -24,15 +24,11 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-      className="rounded-full p-2 text-muted hover:bg-black/5"
+      className="rounded-control p-2 text-ink-3 transition-colors hover:bg-tint hover:text-ink"
       aria-label="Toggle dark mode"
       suppressHydrationWarning
     >
-      {theme === "light" ? (
-        <Moon className="h-5 w-5" />
-      ) : (
-        <Sun className="h-5 w-5" />
-      )}
+      {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
     </button>
   );
 }

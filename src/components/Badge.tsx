@@ -1,17 +1,24 @@
 import type { Priority, WorkOrder, WorkOrderStatus } from "@/types/work-order";
-import { STATUS_LABEL, phaseForStatus, isException, PHASE_COLOR } from "@/lib/domain";
+import {
+  STATUS_LABEL,
+  phaseForStatus,
+  isException,
+  PHASE_COLOR,
+  PHASE_TINT,
+} from "@/lib/domain";
 import { AlertTriangle } from "lucide-react";
+import { Pill } from "@/components/ui";
 
-// Status chip: shows the specific stage name, colored by its phase family
-// so the family reads at a glance across 18 granular statuses.
+// Status chip: shows the specific stage name, tinted by its phase family so
+// the family reads at a glance across 18 granular statuses.
 export function StatusBadge({ status }: { status: WorkOrderStatus }) {
-  const color = PHASE_COLOR[phaseForStatus(status)];
+  const phase = phaseForStatus(status);
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-      style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap"
+      style={{ backgroundColor: PHASE_TINT[phase], color: PHASE_COLOR[phase] }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PHASE_COLOR[phase] }} />
       {STATUS_LABEL[status]}
     </span>
   );
@@ -21,26 +28,35 @@ export function StatusBadge({ status }: { status: WorkOrderStatus }) {
 export function ExceptionFlag({ wo }: { wo: WorkOrder }) {
   if (!isException(wo)) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-phase-exception/15 px-2 py-0.5 text-[11px] font-medium text-phase-exception">
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+      style={{
+        backgroundColor: "var(--phase-exception-tint)",
+        color: "var(--phase-exception)",
+      }}
+    >
       <AlertTriangle className="h-3 w-3" />
       On hold
     </span>
   );
 }
 
-const PRIORITY_STYLES: Record<Priority, { label: string; className: string }> = {
-  emergency_same_day: { label: "Emergency · Same Day", className: "bg-red-600 text-white" },
-  emergency_4_hour: { label: "Emergency · 4hr", className: "bg-red-100 text-red-700" },
-  priority_24_hour: { label: "Priority · 24hr", className: "bg-amber-100 text-amber-800" },
-  standard_48_hour: { label: "Standard · 48hr", className: "bg-blue-100 text-blue-700" },
-  routine_scheduled: { label: "Routine", className: "bg-zinc-100 text-zinc-600" },
+const PRIORITY_STYLES: Record<
+  Priority,
+  { label: string; tone: "critical" | "warning" | "navy" | "neutral"; solid?: boolean }
+> = {
+  emergency_same_day: { label: "Emergency · Same day", tone: "critical", solid: true },
+  emergency_4_hour: { label: "Emergency · 4hr", tone: "critical" },
+  priority_24_hour: { label: "Priority · 24hr", tone: "warning" },
+  standard_48_hour: { label: "Standard · 48hr", tone: "navy" },
+  routine_scheduled: { label: "Routine", tone: "neutral" },
 };
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
-  const { label, className } = PRIORITY_STYLES[priority];
+  const { label, tone, solid } = PRIORITY_STYLES[priority];
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>
+    <Pill tone={tone} solid={solid}>
       {label}
-    </span>
+    </Pill>
   );
 }

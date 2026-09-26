@@ -1,6 +1,14 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { Account, NteIncrease, Site, Vendor, WorkOrder } from "@/types/work-order";
+import type {
+  Account,
+  CompletionRecord,
+  Invoice,
+  NteIncrease,
+  Site,
+  Vendor,
+  WorkOrder,
+} from "@/types/work-order";
 
 // Maps snake_case Postgres rows to the camelCase domain types in
 // src/types/work-order.ts. Keeping the mapping in one place means the rest
@@ -123,6 +131,217 @@ export async function getWorkOrderById(id: string): Promise<WorkOrder | undefine
     .maybeSingle();
   if (error) throw new Error(`getWorkOrderById: ${error.message}`);
   return data ? mapWorkOrder(data) : undefined;
+}
+
+export interface WorkOrderEvent {
+  id: string;
+  kind: string;
+  summary: string;
+  actorName: string | null;
+  meta: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface WorkOrderNote {
+  id: string;
+  body: string;
+  visibility: "internal" | "client";
+  authorName: string | null;
+  createdAt: string;
+}
+
+/** Real activity history, newest first. Replaces the timeline the first
+    version synthesised in the component. */
+function tableMissing(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  return (
+    text.includes("does not exist") ||
+    text.includes("could not find the table") ||
+    text.includes("schema cache") ||
+    error.code === "PGRST205" ||
+    error.code === "42P01"
+  );
+}
+
+export async function getWorkOrderEvents(workOrderId: string): Promise<WorkOrderEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("work_order_events")
+    .select("*")
+    .eq("work_order_id", workOrderId)
+    .order("created_at", { ascending: false });
+  if (!error) {
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      kind: row.kind as string,
+      summary: row.summary as string,
+      actorName: (row.actor_name as string) ?? null,
+      meta: (row.meta as Record<string, unknown>) ?? {},
+      createdAt: row.created_at as string,
+    }));
+  }
+  if (!tableMissing(error)) throw new Error(`getWorkOrderEvents: ${error.message}`);
+  return synthesizeEvents(workOrderId);
+}
+
+export async function getWorkOrderNotes(workOrderId: string): Promise<WorkOrderNote[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("work_order_notes")
+    .select("*")
+    .eq("work_order_id", workOrderId)
+    .order("created_at", { ascending: false });
+  if (!error) {
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      body: row.body as string,
+      visibility: row.visibility as WorkOrderNote["visibility"],
+      authorName: (row.author_name as string) ?? null,
+      createdAt: row.created_at as string,
+    }));
+  }
+  if (!tableMissing(error)) throw new Error(`getWorkOrderNotes: ${error.message}`);
+  return readFallbackNotes(workOrderId);
+}
+
+export function parseFallbackNotes(raw: string | null): WorkOrderNote[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as { notes?: WorkOrderNote[] };
+    if (Array.isArray(parsed.notes)) return parsed.notes;
+  } catch {
+    return [
+      {
+        id: "legacy",
+        body: raw,
+        visibility: "internal",
+        authorName: null,
+        createdAt: new Date(0).toISOString(),
+      },
+    ];
+  }
+  return [];
+}
+
+async function readFallbackNotes(workOrderId: string): Promise<WorkOrderNote[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("completion_records")
+    .select("technician_notes")
+    .eq("work_order_id", workOrderId)
+    .maybeSingle();
+  return parseFallbackNotes((data?.technician_notes as string | null) ?? null);
+}
+
+async function synthesizeEvents(workOrderId: string): Promise<WorkOrderEvent[]> {
+  const supabase = await createClient();
+  const [{ data: wo }, { data: ntes }, { data: quotes }, { data: invoices }] =
+    await Promise.all([
+      supabase
+        .from("work_orders")
+        .select("created_at, source, status, vendor_id")
+        .eq("id", workOrderId)
+        .maybeSingle(),
+      supabase
+        .from("nte_increases")
+        .select("*")
+        .eq("work_order_id", workOrderId)
+        .order("approved_at", { ascending: false }),
+      supabase.from("quotes").select("*").eq("work_order_id", workOrderId),
+      supabase.from("invoices").select("*").eq("work_order_id", workOrderId),
+    ]);
+
+  const events: WorkOrderEvent[] = [];
+  if (wo) {
+    events.push({
+      id: "created",
+      kind: "created",
+      summary: `Work order created via ${String(wo.source).replace(/_/g, " ")}`,
+      actorName: null,
+      meta: {},
+      createdAt: wo.created_at as string,
+    });
+  }
+  for (const row of ntes ?? []) {
+    events.push({
+      id: row.id as string,
+      kind: "nte_increased",
+      summary: `NTE raised to $${Number(row.amount).toLocaleString()} by ${row.approved_by} (${row.method})`,
+      actorName: row.approved_by as string,
+      meta: {},
+      createdAt: row.approved_at as string,
+    });
+  }
+  for (const row of quotes ?? []) {
+    events.push({
+      id: row.id as string,
+      kind: row.status === "draft" ? "quote_submitted" : "quote_decided",
+      summary:
+        row.status === "approved" || row.status === "declined"
+          ? `Client ${row.status} the quote${row.approved_by ? ` (${row.approved_by})` : ""}`
+          : `Quote ${row.status}`,
+      actorName: (row.approved_by as string) ?? null,
+      meta: {},
+      createdAt: (row.approved_at as string) ?? (wo?.created_at as string),
+    });
+  }
+  for (const row of invoices ?? []) {
+    events.push({
+      id: row.id as string,
+      kind: "status_changed",
+      summary: `Invoice ${row.invoice_number} is ${row.status} · $${Number(row.amount).toLocaleString()}`,
+      actorName: null,
+      meta: {},
+      createdAt: (row.issued_at as string) ?? (wo?.created_at as string),
+    });
+  }
+  return events.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function getInvoices(): Promise<Invoice[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .order("issued_at", { ascending: false });
+  if (error) throw new Error(`getInvoices: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    invoiceNumber: row.invoice_number as string,
+    workOrderId: row.work_order_id as string,
+    status: row.status as Invoice["status"],
+    amount: Number(row.amount),
+    issuedAt: (row.issued_at as string) ?? null,
+    dueAt: (row.due_at as string) ?? null,
+  }));
+}
+
+export async function getInvoicesForWorkOrder(workOrderId: string): Promise<Invoice[]> {
+  const all = await getInvoices();
+  return all.filter((invoice) => invoice.workOrderId === workOrderId);
+}
+
+export async function getCompletion(workOrderId: string): Promise<CompletionRecord | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("completion_records")
+    .select("*")
+    .eq("work_order_id", workOrderId)
+    .maybeSingle();
+  if (error) throw new Error(`getCompletion: ${error.message}`);
+  if (!data) return null;
+  return {
+    workOrderId: data.work_order_id as string,
+    beforePhotoUrls: (data.before_photo_urls as string[]) ?? [],
+    afterPhotoUrls: (data.after_photo_urls as string[]) ?? [],
+    afterVideoUrl: (data.after_video_url as string) ?? null,
+    technicianNotes: (data.technician_notes as string) ?? null,
+    rootCause: (data.root_cause as string) ?? null,
+    signOffName: (data.sign_off_name as string) ?? null,
+    signOffSignatureUrl: (data.sign_off_signature_url as string) ?? null,
+    signOffAt: (data.sign_off_at as string) ?? null,
+  };
 }
 
 // Fetches everything the app currently needs in one place — small
